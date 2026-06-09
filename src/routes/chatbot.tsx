@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowLeft, Shield } from "lucide-react";
-import { SiteFooter } from "@/components/site-footer";
 import { CHATBOT_URL } from "@/lib/chatbot-config";
 
 export const Route = createFileRoute("/chatbot")({
