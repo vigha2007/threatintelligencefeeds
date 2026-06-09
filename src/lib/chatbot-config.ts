@@ -1,0 +1,1 @@
+export const CHATBOT_URL = "CHATBOT_URL_PLACEHOLDER";
