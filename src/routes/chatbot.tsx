@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowLeft, Mail, MessageSquare, Phone, Link2, AlertTriangle, Shield } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { CHATBOT_URL } from "@/lib/chatbot-config";
 
@@ -15,15 +15,6 @@ export const Route = createFileRoute("/chatbot")({
   }),
   component: ChatbotPage,
 });
-
-const capabilities = [
-  { icon: Mail, label: "Emails", emoji: "📧" },
-  { icon: MessageSquare, label: "Messages", emoji: "💬" },
-  { icon: Phone, label: "Call-related Content", emoji: "📞" },
-  { icon: Link2, label: "URLs & Links", emoji: "🔗" },
-  { icon: AlertTriangle, label: "Phishing Attempts", emoji: "⚠️" },
-  { icon: Shield, label: "Online Fraud Indicators", emoji: "🛡️" },
-];
 
 function ChatbotPage() {
   return (
