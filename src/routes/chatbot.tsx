@@ -18,94 +18,77 @@ export const Route = createFileRoute("/chatbot")({
 
 function ChatbotPage() {
   return (
-    <div className="relative min-h-screen">
-      {/* Header */}
-      <header className="relative z-10 mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
+    <div className="relative flex h-screen flex-col">
+      {/* Compact Header */}
+      <header className="relative z-10 mx-auto w-full max-w-7xl shrink-0 px-4 pt-2 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="glass flex items-center justify-between gap-4 rounded-2xl p-4 sm:p-5"
+          className="glass flex items-center justify-between gap-3 rounded-2xl p-2.5 sm:p-3"
         >
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#00D4FF] to-[#7B61FF] glow-cyan">
-              <Shield className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#00D4FF] to-[#7B61FF] glow-cyan">
+              <Shield className="h-4 w-4 text-white" />
             </div>
             <div>
-              <div className="text-base font-bold text-white sm:text-lg">
+              <div className="text-sm font-bold text-white sm:text-base">
                 <span aria-hidden>🛡️</span> Scam Detector AI
               </div>
-              <p className="text-xs text-muted-foreground sm:text-sm">
-                Detect Scam Emails, Messages, Calls &amp; Phishing Links Instantly
+              <p className="text-[11px] leading-tight text-muted-foreground sm:text-xs">
+                Detect scams, phishing &amp; fraud instantly.
               </p>
             </div>
           </div>
           <Link
             to="/"
-            className="inline-flex items-center gap-2 rounded-full border border-[#00D4FF]/40 bg-[#00D4FF]/10 px-3 py-2 text-sm font-medium text-[#00D4FF] transition-all hover:bg-[#00D4FF]/20 hover:glow-cyan sm:px-4"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#00D4FF]/40 bg-[#00D4FF]/10 px-2.5 py-1.5 text-xs font-medium text-[#00D4FF] transition-all hover:bg-[#00D4FF]/20 hover:glow-cyan sm:px-3"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Back to Dashboard</span>
             <span className="sm:hidden">Back</span>
           </Link>
         </motion.div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        {/* Welcome — compact */}
+      {/* Chatbot iframe — fills remaining viewport */}
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-2 pt-2 sm:px-6 sm:pb-3 sm:pt-3 lg:px-8">
         <motion.section
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="glass relative overflow-hidden rounded-2xl px-4 py-3 sm:px-6 sm:py-4"
+          className="glass flex flex-1 flex-col overflow-hidden rounded-2xl sm:rounded-3xl"
         >
-          <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex shrink-0 items-center justify-between border-b border-white/5 px-4 py-2">
             <div className="flex items-center gap-2">
-              <span className="text-lg" aria-hidden>🛡️</span>
-              <h1 className="text-sm font-bold text-white sm:text-base">Scam Detector AI</h1>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1"><span aria-hidden>📧</span> Emails</span>
-              <span className="inline-flex items-center gap-1"><span aria-hidden>💬</span> Messages</span>
-              <span className="inline-flex items-center gap-1"><span aria-hidden>📞</span> Calls</span>
-              <span className="inline-flex items-center gap-1"><span aria-hidden>🔗</span> URLs</span>
-              <span className="inline-flex items-center gap-1"><span aria-hidden>⚠️</span> Phishing</span>
-            </div>
-            <p className="w-full text-xs text-muted-foreground sm:w-auto sm:text-sm">Paste content below for analysis.</p>
-          </div>
-        </motion.section>
-
-        {/* Chatbot iframe container */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="glass mt-3 overflow-hidden rounded-3xl p-2 sm:p-3"
-        >
-          <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-[#FF4D4D]" />
-              <span className="h-3 w-3 rounded-full bg-[#FFB020]" />
-              <span className="h-3 w-3 rounded-full bg-[#00FFA3]" />
-              <span className="ml-3 text-xs font-medium text-muted-foreground">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#FF4D4D]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#FFB020]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#00FFA3]" />
+              <span className="ml-2 text-[11px] font-medium text-muted-foreground">
                 scam-detector.ai · secure session
               </span>
             </div>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#00FFA3]">
-              <span className="h-2 w-2 animate-pulse-dot rounded-full bg-[#00FFA3]" />
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#00FFA3]">
+              <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-[#00FFA3]" />
               Online
             </span>
           </div>
-          <div className="overflow-hidden rounded-2xl bg-[#0A0F1F]">
+          <div className="flex-1 overflow-hidden bg-[#0A0F1F]">
             <iframe
               src={CHATBOT_URL}
               width="100%"
-              height="900px"
+              height="100%"
               frameBorder="0"
               allowFullScreen
               title="Scam Detector AI Chatbot"
-              className="block w-full"
-              style={{ minHeight: "900px" }}
+              className="block h-full w-full"
             />
           </div>
         </motion.section>
       </main>
 
-      <SiteFooter />
+      {/* Minimal footer */}
+      <footer className="relative z-10 shrink-0 border-t border-white/5 py-2 text-center">
+        <p className="text-[11px] text-muted-foreground">
+          Powered by Scam Detector AI <span aria-hidden>🛡️</span>
+        </p>
+      </footer>
     </div>
   );
 }
