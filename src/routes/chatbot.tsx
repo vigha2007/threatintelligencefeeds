@@ -58,42 +58,25 @@ function ChatbotPage() {
         </motion.div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome */}
+      <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        {/* Welcome — compact */}
         <motion.section
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="glass-strong relative overflow-hidden rounded-3xl p-6 sm:p-10"
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="glass relative overflow-hidden rounded-2xl px-4 py-3 sm:px-6 sm:py-4"
         >
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#7B61FF] opacity-20 blur-3xl" />
-          <div className="absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-[#00D4FF] opacity-20 blur-3xl" />
-          <div className="relative">
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">
-              <span aria-hidden>👋</span> Welcome to Scam Detector AI
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground sm:text-base">I can analyze:</p>
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {capabilities.map((c, i) => {
-                const Icon = c.icon;
-                return (
-                  <motion.div
-                    key={c.label}
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 + i * 0.05 }}
-                    className="glass flex flex-col items-center gap-2 rounded-xl p-3 text-center transition-transform hover:-translate-y-1"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#00D4FF]/20 to-[#7B61FF]/20">
-                      <Icon className="h-5 w-5 text-[#00D4FF]" />
-                    </div>
-                    <div className="text-xs font-medium text-white">
-                      <span className="mr-1">{c.emoji}</span>{c.label}
-                    </div>
-                  </motion.div>
-                );
-              })}
+          <div className="relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg" aria-hidden>🛡️</span>
+              <h1 className="text-sm font-bold text-white sm:text-base">Scam Detector AI</h1>
             </div>
-            <p className="mt-6 text-sm text-muted-foreground sm:text-base">
-              Paste any content below and I will determine whether it appears legitimate or suspicious.
-            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1"><span aria-hidden>📧</span> Emails</span>
+              <span className="inline-flex items-center gap-1"><span aria-hidden>💬</span> Messages</span>
+              <span className="inline-flex items-center gap-1"><span aria-hidden>📞</span> Calls</span>
+              <span className="inline-flex items-center gap-1"><span aria-hidden>🔗</span> URLs</span>
+              <span className="inline-flex items-center gap-1"><span aria-hidden>⚠️</span> Phishing</span>
+            </div>
+            <p className="w-full text-xs text-muted-foreground sm:w-auto sm:text-sm">Paste content below for analysis.</p>
           </div>
         </motion.section>
 
