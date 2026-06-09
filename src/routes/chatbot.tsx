@@ -73,8 +73,8 @@ function ChatbotPage() {
 
         {/* Chatbot iframe container */}
         <motion.section
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-          className="glass mt-8 overflow-hidden rounded-3xl p-2 sm:p-3"
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          className="glass mt-3 overflow-hidden rounded-3xl p-2 sm:p-3"
         >
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
             <div className="flex items-center gap-2">
