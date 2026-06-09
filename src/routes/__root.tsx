@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Threat Intelligence" },
+      { name: "description", content: "A cybersecurity dashboard and chatbot integration for real-time scam detection and threat analysis." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Threat Intelligence" },
+      { property: "og:description", content: "A cybersecurity dashboard and chatbot integration for real-time scam detection and threat analysis." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Threat Intelligence" },
+      { name: "twitter:description", content: "A cybersecurity dashboard and chatbot integration for real-time scam detection and threat analysis." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ebc26eba-c9f1-474b-9982-3a35ffeb5daf/id-preview-79cb65c9--7035df47-fde5-4b6c-b020-ae864ebd071c.lovable.app-1780986232300.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ebc26eba-c9f1-474b-9982-3a35ffeb5daf/id-preview-79cb65c9--7035df47-fde5-4b6c-b020-ae864ebd071c.lovable.app-1780986232300.png" },
     ],
     links: [
       {
