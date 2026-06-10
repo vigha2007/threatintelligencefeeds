@@ -3,6 +3,10 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { entities, allEntityKeys, type EntityKey } from "./threat-entities";
 
+type JsonPrimitive = string | number | boolean | null;
+type Json = JsonPrimitive | Json[] | { [k: string]: Json };
+type EntityRow = { [k: string]: Json };
+
 const entityKeySchema = z.enum(allEntityKeys as [EntityKey, ...EntityKey[]]);
 
 export const listEntity = createServerFn({ method: "GET" })
