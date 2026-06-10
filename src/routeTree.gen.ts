@@ -12,6 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedThreatsRouteImport } from './routes/_authenticated/threats'
+import { Route as AuthenticatedSpamCallsRouteImport } from './routes/_authenticated/spam-calls'
+import { Route as AuthenticatedScamMessagesRouteImport } from './routes/_authenticated/scam-messages'
+import { Route as AuthenticatedPhishingUrlsRouteImport } from './routes/_authenticated/phishing-urls'
+import { Route as AuthenticatedMaliciousIpsRouteImport } from './routes/_authenticated/malicious-ips'
+import { Route as AuthenticatedEmailScamsRouteImport } from './routes/_authenticated/email-scams'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChatbotRouteImport } from './routes/_authenticated/chatbot'
 
@@ -29,6 +35,39 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedThreatsRoute = AuthenticatedThreatsRouteImport.update({
+  id: '/threats',
+  path: '/threats',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSpamCallsRoute = AuthenticatedSpamCallsRouteImport.update({
+  id: '/spam-calls',
+  path: '/spam-calls',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedScamMessagesRoute =
+  AuthenticatedScamMessagesRouteImport.update({
+    id: '/scam-messages',
+    path: '/scam-messages',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPhishingUrlsRoute =
+  AuthenticatedPhishingUrlsRouteImport.update({
+    id: '/phishing-urls',
+    path: '/phishing-urls',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMaliciousIpsRoute =
+  AuthenticatedMaliciousIpsRouteImport.update({
+    id: '/malicious-ips',
+    path: '/malicious-ips',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEmailScamsRoute = AuthenticatedEmailScamsRouteImport.update({
+  id: '/email-scams',
+  path: '/email-scams',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -45,12 +84,24 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/chatbot': typeof AuthenticatedChatbotRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/email-scams': typeof AuthenticatedEmailScamsRoute
+  '/malicious-ips': typeof AuthenticatedMaliciousIpsRoute
+  '/phishing-urls': typeof AuthenticatedPhishingUrlsRoute
+  '/scam-messages': typeof AuthenticatedScamMessagesRoute
+  '/spam-calls': typeof AuthenticatedSpamCallsRoute
+  '/threats': typeof AuthenticatedThreatsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/chatbot': typeof AuthenticatedChatbotRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/email-scams': typeof AuthenticatedEmailScamsRoute
+  '/malicious-ips': typeof AuthenticatedMaliciousIpsRoute
+  '/phishing-urls': typeof AuthenticatedPhishingUrlsRoute
+  '/scam-messages': typeof AuthenticatedScamMessagesRoute
+  '/spam-calls': typeof AuthenticatedSpamCallsRoute
+  '/threats': typeof AuthenticatedThreatsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +110,38 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/chatbot': typeof AuthenticatedChatbotRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/email-scams': typeof AuthenticatedEmailScamsRoute
+  '/_authenticated/malicious-ips': typeof AuthenticatedMaliciousIpsRoute
+  '/_authenticated/phishing-urls': typeof AuthenticatedPhishingUrlsRoute
+  '/_authenticated/scam-messages': typeof AuthenticatedScamMessagesRoute
+  '/_authenticated/spam-calls': typeof AuthenticatedSpamCallsRoute
+  '/_authenticated/threats': typeof AuthenticatedThreatsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/chatbot' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/chatbot'
+    | '/dashboard'
+    | '/email-scams'
+    | '/malicious-ips'
+    | '/phishing-urls'
+    | '/scam-messages'
+    | '/spam-calls'
+    | '/threats'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/chatbot' | '/dashboard'
+  to:
+    | '/'
+    | '/auth'
+    | '/chatbot'
+    | '/dashboard'
+    | '/email-scams'
+    | '/malicious-ips'
+    | '/phishing-urls'
+    | '/scam-messages'
+    | '/spam-calls'
+    | '/threats'
   id:
     | '__root__'
     | '/'
@@ -72,6 +149,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/chatbot'
     | '/_authenticated/dashboard'
+    | '/_authenticated/email-scams'
+    | '/_authenticated/malicious-ips'
+    | '/_authenticated/phishing-urls'
+    | '/_authenticated/scam-messages'
+    | '/_authenticated/spam-calls'
+    | '/_authenticated/threats'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -103,6 +186,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/threats': {
+      id: '/_authenticated/threats'
+      path: '/threats'
+      fullPath: '/threats'
+      preLoaderRoute: typeof AuthenticatedThreatsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/spam-calls': {
+      id: '/_authenticated/spam-calls'
+      path: '/spam-calls'
+      fullPath: '/spam-calls'
+      preLoaderRoute: typeof AuthenticatedSpamCallsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/scam-messages': {
+      id: '/_authenticated/scam-messages'
+      path: '/scam-messages'
+      fullPath: '/scam-messages'
+      preLoaderRoute: typeof AuthenticatedScamMessagesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/phishing-urls': {
+      id: '/_authenticated/phishing-urls'
+      path: '/phishing-urls'
+      fullPath: '/phishing-urls'
+      preLoaderRoute: typeof AuthenticatedPhishingUrlsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/malicious-ips': {
+      id: '/_authenticated/malicious-ips'
+      path: '/malicious-ips'
+      fullPath: '/malicious-ips'
+      preLoaderRoute: typeof AuthenticatedMaliciousIpsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/email-scams': {
+      id: '/_authenticated/email-scams'
+      path: '/email-scams'
+      fullPath: '/email-scams'
+      preLoaderRoute: typeof AuthenticatedEmailScamsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -123,11 +248,23 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedChatbotRoute: typeof AuthenticatedChatbotRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEmailScamsRoute: typeof AuthenticatedEmailScamsRoute
+  AuthenticatedMaliciousIpsRoute: typeof AuthenticatedMaliciousIpsRoute
+  AuthenticatedPhishingUrlsRoute: typeof AuthenticatedPhishingUrlsRoute
+  AuthenticatedScamMessagesRoute: typeof AuthenticatedScamMessagesRoute
+  AuthenticatedSpamCallsRoute: typeof AuthenticatedSpamCallsRoute
+  AuthenticatedThreatsRoute: typeof AuthenticatedThreatsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChatbotRoute: AuthenticatedChatbotRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEmailScamsRoute: AuthenticatedEmailScamsRoute,
+  AuthenticatedMaliciousIpsRoute: AuthenticatedMaliciousIpsRoute,
+  AuthenticatedPhishingUrlsRoute: AuthenticatedPhishingUrlsRoute,
+  AuthenticatedScamMessagesRoute: AuthenticatedScamMessagesRoute,
+  AuthenticatedSpamCallsRoute: AuthenticatedSpamCallsRoute,
+  AuthenticatedThreatsRoute: AuthenticatedThreatsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
