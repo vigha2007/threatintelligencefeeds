@@ -14,16 +14,311 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      email_scams: {
+        Row: {
+          category: string | null
+          created_at: string
+          detected_at: string
+          id: string
+          recipients_count: number
+          sender: string
+          severity: Database["public"]["Enums"]["threat_severity"]
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          detected_at?: string
+          id?: string
+          recipients_count?: number
+          sender: string
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          detected_at?: string
+          id?: string
+          recipients_count?: number
+          sender?: string
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      malicious_ips: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          ip_address: string
+          last_seen: string
+          severity: Database["public"]["Enums"]["threat_severity"]
+          threat_type: string | null
+          user_id: string
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip_address: string
+          last_seen?: string
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          threat_type?: string | null
+          user_id: string
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string
+          last_seen?: string
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          threat_type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      phishing_urls: {
+        Row: {
+          blocked_at: string
+          created_at: string
+          domain: string | null
+          id: string
+          notes: string | null
+          severity: Database["public"]["Enums"]["threat_severity"]
+          status: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          blocked_at?: string
+          created_at?: string
+          domain?: string | null
+          id?: string
+          notes?: string | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          status?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          blocked_at?: string
+          created_at?: string
+          domain?: string | null
+          id?: string
+          notes?: string | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          status?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      scam_detector_results: {
+        Row: {
+          classification: string
+          confidence: number | null
+          created_at: string
+          id: string
+          input_text: string
+          raw_response: Json | null
+          severity: Database["public"]["Enums"]["threat_severity"]
+          user_id: string
+        }
+        Insert: {
+          classification: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          input_text: string
+          raw_response?: Json | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          user_id: string
+        }
+        Update: {
+          classification?: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          input_text?: string
+          raw_response?: Json | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scam_messages: {
+        Row: {
+          channel: string
+          content: string
+          created_at: string
+          detected_at: string
+          id: string
+          sender: string | null
+          severity: Database["public"]["Enums"]["threat_severity"]
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          content: string
+          created_at?: string
+          detected_at?: string
+          id?: string
+          sender?: string | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          content?: string
+          created_at?: string
+          detected_at?: string
+          id?: string
+          sender?: string | null
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      spam_calls: {
+        Row: {
+          country: string | null
+          created_at: string
+          id: string
+          pattern: string | null
+          phone_number: string
+          reported_at: string
+          severity: Database["public"]["Enums"]["threat_severity"]
+          user_id: string
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          pattern?: string | null
+          phone_number: string
+          reported_at?: string
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          user_id: string
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          id?: string
+          pattern?: string | null
+          phone_number?: string
+          reported_at?: string
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      threats: {
+        Row: {
+          created_at: string
+          description: string | null
+          detected_at: string
+          id: string
+          severity: Database["public"]["Enums"]["threat_severity"]
+          source: string | null
+          status: string
+          title: string
+          type: Database["public"]["Enums"]["threat_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          detected_at?: string
+          id?: string
+          severity: Database["public"]["Enums"]["threat_severity"]
+          source?: string | null
+          status?: string
+          title: string
+          type: Database["public"]["Enums"]["threat_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          detected_at?: string
+          id?: string
+          severity?: Database["public"]["Enums"]["threat_severity"]
+          source?: string | null
+          status?: string
+          title?: string
+          type?: Database["public"]["Enums"]["threat_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "analyst" | "user"
+      threat_severity: "critical" | "high" | "medium" | "low"
+      threat_type:
+        | "phishing_url"
+        | "spam_call"
+        | "email_scam"
+        | "malicious_ip"
+        | "scam_message"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +445,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "analyst", "user"],
+      threat_severity: ["critical", "high", "medium", "low"],
+      threat_type: [
+        "phishing_url",
+        "spam_call",
+        "email_scam",
+        "malicious_ip",
+        "scam_message",
+        "other",
+      ],
+    },
   },
 } as const
