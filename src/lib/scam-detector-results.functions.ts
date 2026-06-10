@@ -15,13 +15,16 @@ export const saveScamDetectorResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => inputSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    const sb = context.supabase as unknown as {
+      from: (t: string) => { insert: (v: Record<string, unknown>) => { select: () => { single: () => Promise<{ data: unknown; error: { message: string } | null }> } } };
+    };
+    const { data: row, error } = await sb
       .from("scam_detector_results")
       .insert({ ...data, user_id: context.userId })
       .select()
       .single();
     if (error) throw new Error(error.message);
-    return { row };
+    return { row: row as Record<string, string | number | boolean | null> };
   });
 
 export const listScamDetectorResults = createServerFn({ method: "GET" })
