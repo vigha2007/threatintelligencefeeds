@@ -9,12 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ChatbotRouteImport } from './routes/chatbot'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedThreatsRouteImport } from './routes/_authenticated/threats'
+import { Route as AuthenticatedSpamCallsRouteImport } from './routes/_authenticated/spam-calls'
+import { Route as AuthenticatedScamMessagesRouteImport } from './routes/_authenticated/scam-messages'
+import { Route as AuthenticatedPhishingUrlsRouteImport } from './routes/_authenticated/phishing-urls'
+import { Route as AuthenticatedMaliciousIpsRouteImport } from './routes/_authenticated/malicious-ips'
+import { Route as AuthenticatedEmailScamsRouteImport } from './routes/_authenticated/email-scams'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedChatbotRouteImport } from './routes/_authenticated/chatbot'
+import { Route as ApiV1EntityRouteImport } from './routes/api/v1/$entity'
+import { Route as ApiV1ScamDetectorResultsRouteImport } from './routes/api/v1/scam-detector.results'
+import { Route as ApiV1DashboardMetricsRouteImport } from './routes/api/v1/dashboard.metrics'
+import { Route as ApiV1EntityIdRouteImport } from './routes/api/v1/$entity.$id'
 
-const ChatbotRoute = ChatbotRouteImport.update({
-  id: '/chatbot',
-  path: '/chatbot',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -22,40 +39,196 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedThreatsRoute = AuthenticatedThreatsRouteImport.update({
+  id: '/threats',
+  path: '/threats',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSpamCallsRoute = AuthenticatedSpamCallsRouteImport.update({
+  id: '/spam-calls',
+  path: '/spam-calls',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedScamMessagesRoute =
+  AuthenticatedScamMessagesRouteImport.update({
+    id: '/scam-messages',
+    path: '/scam-messages',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPhishingUrlsRoute =
+  AuthenticatedPhishingUrlsRouteImport.update({
+    id: '/phishing-urls',
+    path: '/phishing-urls',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMaliciousIpsRoute =
+  AuthenticatedMaliciousIpsRouteImport.update({
+    id: '/malicious-ips',
+    path: '/malicious-ips',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEmailScamsRoute = AuthenticatedEmailScamsRouteImport.update({
+  id: '/email-scams',
+  path: '/email-scams',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChatbotRoute = AuthenticatedChatbotRouteImport.update({
+  id: '/chatbot',
+  path: '/chatbot',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiV1EntityRoute = ApiV1EntityRouteImport.update({
+  id: '/api/v1/$entity',
+  path: '/api/v1/$entity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ScamDetectorResultsRoute =
+  ApiV1ScamDetectorResultsRouteImport.update({
+    id: '/api/v1/scam-detector/results',
+    path: '/api/v1/scam-detector/results',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiV1DashboardMetricsRoute = ApiV1DashboardMetricsRouteImport.update({
+  id: '/api/v1/dashboard/metrics',
+  path: '/api/v1/dashboard/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1EntityIdRoute = ApiV1EntityIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiV1EntityRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/chatbot': typeof ChatbotRoute
+  '/auth': typeof AuthRoute
+  '/chatbot': typeof AuthenticatedChatbotRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/email-scams': typeof AuthenticatedEmailScamsRoute
+  '/malicious-ips': typeof AuthenticatedMaliciousIpsRoute
+  '/phishing-urls': typeof AuthenticatedPhishingUrlsRoute
+  '/scam-messages': typeof AuthenticatedScamMessagesRoute
+  '/spam-calls': typeof AuthenticatedSpamCallsRoute
+  '/threats': typeof AuthenticatedThreatsRoute
+  '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
+  '/api/v1/$entity/$id': typeof ApiV1EntityIdRoute
+  '/api/v1/dashboard/metrics': typeof ApiV1DashboardMetricsRoute
+  '/api/v1/scam-detector/results': typeof ApiV1ScamDetectorResultsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/chatbot': typeof ChatbotRoute
+  '/auth': typeof AuthRoute
+  '/chatbot': typeof AuthenticatedChatbotRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/email-scams': typeof AuthenticatedEmailScamsRoute
+  '/malicious-ips': typeof AuthenticatedMaliciousIpsRoute
+  '/phishing-urls': typeof AuthenticatedPhishingUrlsRoute
+  '/scam-messages': typeof AuthenticatedScamMessagesRoute
+  '/spam-calls': typeof AuthenticatedSpamCallsRoute
+  '/threats': typeof AuthenticatedThreatsRoute
+  '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
+  '/api/v1/$entity/$id': typeof ApiV1EntityIdRoute
+  '/api/v1/dashboard/metrics': typeof ApiV1DashboardMetricsRoute
+  '/api/v1/scam-detector/results': typeof ApiV1ScamDetectorResultsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/chatbot': typeof ChatbotRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/chatbot': typeof AuthenticatedChatbotRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/email-scams': typeof AuthenticatedEmailScamsRoute
+  '/_authenticated/malicious-ips': typeof AuthenticatedMaliciousIpsRoute
+  '/_authenticated/phishing-urls': typeof AuthenticatedPhishingUrlsRoute
+  '/_authenticated/scam-messages': typeof AuthenticatedScamMessagesRoute
+  '/_authenticated/spam-calls': typeof AuthenticatedSpamCallsRoute
+  '/_authenticated/threats': typeof AuthenticatedThreatsRoute
+  '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
+  '/api/v1/$entity/$id': typeof ApiV1EntityIdRoute
+  '/api/v1/dashboard/metrics': typeof ApiV1DashboardMetricsRoute
+  '/api/v1/scam-detector/results': typeof ApiV1ScamDetectorResultsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chatbot'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/chatbot'
+    | '/dashboard'
+    | '/email-scams'
+    | '/malicious-ips'
+    | '/phishing-urls'
+    | '/scam-messages'
+    | '/spam-calls'
+    | '/threats'
+    | '/api/v1/$entity'
+    | '/api/v1/$entity/$id'
+    | '/api/v1/dashboard/metrics'
+    | '/api/v1/scam-detector/results'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chatbot'
-  id: '__root__' | '/' | '/chatbot'
+  to:
+    | '/'
+    | '/auth'
+    | '/chatbot'
+    | '/dashboard'
+    | '/email-scams'
+    | '/malicious-ips'
+    | '/phishing-urls'
+    | '/scam-messages'
+    | '/spam-calls'
+    | '/threats'
+    | '/api/v1/$entity'
+    | '/api/v1/$entity/$id'
+    | '/api/v1/dashboard/metrics'
+    | '/api/v1/scam-detector/results'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/chatbot'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/email-scams'
+    | '/_authenticated/malicious-ips'
+    | '/_authenticated/phishing-urls'
+    | '/_authenticated/scam-messages'
+    | '/_authenticated/spam-calls'
+    | '/_authenticated/threats'
+    | '/api/v1/$entity'
+    | '/api/v1/$entity/$id'
+    | '/api/v1/dashboard/metrics'
+    | '/api/v1/scam-detector/results'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ChatbotRoute: typeof ChatbotRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ApiV1EntityRoute: typeof ApiV1EntityRouteWithChildren
+  ApiV1DashboardMetricsRoute: typeof ApiV1DashboardMetricsRoute
+  ApiV1ScamDetectorResultsRoute: typeof ApiV1ScamDetectorResultsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/chatbot': {
-      id: '/chatbot'
-      path: '/chatbot'
-      fullPath: '/chatbot'
-      preLoaderRoute: typeof ChatbotRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -65,23 +238,138 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/threats': {
+      id: '/_authenticated/threats'
+      path: '/threats'
+      fullPath: '/threats'
+      preLoaderRoute: typeof AuthenticatedThreatsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/spam-calls': {
+      id: '/_authenticated/spam-calls'
+      path: '/spam-calls'
+      fullPath: '/spam-calls'
+      preLoaderRoute: typeof AuthenticatedSpamCallsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/scam-messages': {
+      id: '/_authenticated/scam-messages'
+      path: '/scam-messages'
+      fullPath: '/scam-messages'
+      preLoaderRoute: typeof AuthenticatedScamMessagesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/phishing-urls': {
+      id: '/_authenticated/phishing-urls'
+      path: '/phishing-urls'
+      fullPath: '/phishing-urls'
+      preLoaderRoute: typeof AuthenticatedPhishingUrlsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/malicious-ips': {
+      id: '/_authenticated/malicious-ips'
+      path: '/malicious-ips'
+      fullPath: '/malicious-ips'
+      preLoaderRoute: typeof AuthenticatedMaliciousIpsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/email-scams': {
+      id: '/_authenticated/email-scams'
+      path: '/email-scams'
+      fullPath: '/email-scams'
+      preLoaderRoute: typeof AuthenticatedEmailScamsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chatbot': {
+      id: '/_authenticated/chatbot'
+      path: '/chatbot'
+      fullPath: '/chatbot'
+      preLoaderRoute: typeof AuthenticatedChatbotRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/v1/$entity': {
+      id: '/api/v1/$entity'
+      path: '/api/v1/$entity'
+      fullPath: '/api/v1/$entity'
+      preLoaderRoute: typeof ApiV1EntityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/scam-detector/results': {
+      id: '/api/v1/scam-detector/results'
+      path: '/api/v1/scam-detector/results'
+      fullPath: '/api/v1/scam-detector/results'
+      preLoaderRoute: typeof ApiV1ScamDetectorResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/dashboard/metrics': {
+      id: '/api/v1/dashboard/metrics'
+      path: '/api/v1/dashboard/metrics'
+      fullPath: '/api/v1/dashboard/metrics'
+      preLoaderRoute: typeof ApiV1DashboardMetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/$entity/$id': {
+      id: '/api/v1/$entity/$id'
+      path: '/$id'
+      fullPath: '/api/v1/$entity/$id'
+      preLoaderRoute: typeof ApiV1EntityIdRouteImport
+      parentRoute: typeof ApiV1EntityRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedChatbotRoute: typeof AuthenticatedChatbotRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEmailScamsRoute: typeof AuthenticatedEmailScamsRoute
+  AuthenticatedMaliciousIpsRoute: typeof AuthenticatedMaliciousIpsRoute
+  AuthenticatedPhishingUrlsRoute: typeof AuthenticatedPhishingUrlsRoute
+  AuthenticatedScamMessagesRoute: typeof AuthenticatedScamMessagesRoute
+  AuthenticatedSpamCallsRoute: typeof AuthenticatedSpamCallsRoute
+  AuthenticatedThreatsRoute: typeof AuthenticatedThreatsRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedChatbotRoute: AuthenticatedChatbotRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEmailScamsRoute: AuthenticatedEmailScamsRoute,
+  AuthenticatedMaliciousIpsRoute: AuthenticatedMaliciousIpsRoute,
+  AuthenticatedPhishingUrlsRoute: AuthenticatedPhishingUrlsRoute,
+  AuthenticatedScamMessagesRoute: AuthenticatedScamMessagesRoute,
+  AuthenticatedSpamCallsRoute: AuthenticatedSpamCallsRoute,
+  AuthenticatedThreatsRoute: AuthenticatedThreatsRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
+interface ApiV1EntityRouteChildren {
+  ApiV1EntityIdRoute: typeof ApiV1EntityIdRoute
+}
+
+const ApiV1EntityRouteChildren: ApiV1EntityRouteChildren = {
+  ApiV1EntityIdRoute: ApiV1EntityIdRoute,
+}
+
+const ApiV1EntityRouteWithChildren = ApiV1EntityRoute._addFileChildren(
+  ApiV1EntityRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ChatbotRoute: ChatbotRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ApiV1EntityRoute: ApiV1EntityRouteWithChildren,
+  ApiV1DashboardMetricsRoute: ApiV1DashboardMetricsRoute,
+  ApiV1ScamDetectorResultsRoute: ApiV1ScamDetectorResultsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
