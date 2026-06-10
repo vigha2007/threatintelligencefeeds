@@ -126,9 +126,13 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
       dateCol: string,
       descCols: string[]
     ) => {
-      const { data } = await supabase
+      const sb = supabase as unknown as { from: (t: string) => { select: (s: string) => { gte: (c: string, v: string) => { order: (c: string, o: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: unknown[] | null }> } } } } };
+      const { data } = await sb
         .from(table)
         .select(`${dateCol}, severity, ${descCols.join(",")}`)
+        .gte(dateCol, since60)
+        .order(dateCol, { ascending: false })
+        .limit(20);
         .gte(dateCol, since60)
         .order(dateCol, { ascending: false })
         .limit(20);
