@@ -25,7 +25,7 @@ export const listEntity = createServerFn({ method: "GET" })
       .order(def.dateColumn, { ascending: false })
       .limit(500);
     if (error) throw new Error(error.message);
-    return { rows: (rows ?? []) as Array<Record<string, unknown>> };
+    return { rows: (rows ?? []) as EntityRow[] };
   });
 
 export const createEntity = createServerFn({ method: "POST" })
