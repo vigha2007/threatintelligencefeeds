@@ -133,9 +133,6 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
         .gte(dateCol, since60)
         .order(dateCol, { ascending: false })
         .limit(20);
-        .gte(dateCol, since60)
-        .order(dateCol, { ascending: false })
-        .limit(20);
       for (const r of (data ?? []) as unknown as Array<Record<string, string>>) {
         const desc = descCols.map((c) => r[c]).filter(Boolean).join(" — ") || label;
         const d = new Date(r[dateCol]);
