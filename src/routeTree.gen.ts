@@ -20,6 +20,10 @@ import { Route as AuthenticatedMaliciousIpsRouteImport } from './routes/_authent
 import { Route as AuthenticatedEmailScamsRouteImport } from './routes/_authenticated/email-scams'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChatbotRouteImport } from './routes/_authenticated/chatbot'
+import { Route as ApiV1EntityRouteImport } from './routes/api/v1/$entity'
+import { Route as ApiV1ScamDetectorResultsRouteImport } from './routes/api/v1/scam-detector.results'
+import { Route as ApiV1DashboardMetricsRouteImport } from './routes/api/v1/dashboard.metrics'
+import { Route as ApiV1EntityIdRouteImport } from './routes/api/v1/$entity.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -78,6 +82,27 @@ const AuthenticatedChatbotRoute = AuthenticatedChatbotRouteImport.update({
   path: '/chatbot',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiV1EntityRoute = ApiV1EntityRouteImport.update({
+  id: '/api/v1/$entity',
+  path: '/api/v1/$entity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ScamDetectorResultsRoute =
+  ApiV1ScamDetectorResultsRouteImport.update({
+    id: '/api/v1/scam-detector/results',
+    path: '/api/v1/scam-detector/results',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiV1DashboardMetricsRoute = ApiV1DashboardMetricsRouteImport.update({
+  id: '/api/v1/dashboard/metrics',
+  path: '/api/v1/dashboard/metrics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1EntityIdRoute = ApiV1EntityIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiV1EntityRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -90,6 +115,10 @@ export interface FileRoutesByFullPath {
   '/scam-messages': typeof AuthenticatedScamMessagesRoute
   '/spam-calls': typeof AuthenticatedSpamCallsRoute
   '/threats': typeof AuthenticatedThreatsRoute
+  '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
+  '/api/v1/$entity/$id': typeof ApiV1EntityIdRoute
+  '/api/v1/dashboard/metrics': typeof ApiV1DashboardMetricsRoute
+  '/api/v1/scam-detector/results': typeof ApiV1ScamDetectorResultsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +131,10 @@ export interface FileRoutesByTo {
   '/scam-messages': typeof AuthenticatedScamMessagesRoute
   '/spam-calls': typeof AuthenticatedSpamCallsRoute
   '/threats': typeof AuthenticatedThreatsRoute
+  '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
+  '/api/v1/$entity/$id': typeof ApiV1EntityIdRoute
+  '/api/v1/dashboard/metrics': typeof ApiV1DashboardMetricsRoute
+  '/api/v1/scam-detector/results': typeof ApiV1ScamDetectorResultsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +149,10 @@ export interface FileRoutesById {
   '/_authenticated/scam-messages': typeof AuthenticatedScamMessagesRoute
   '/_authenticated/spam-calls': typeof AuthenticatedSpamCallsRoute
   '/_authenticated/threats': typeof AuthenticatedThreatsRoute
+  '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
+  '/api/v1/$entity/$id': typeof ApiV1EntityIdRoute
+  '/api/v1/dashboard/metrics': typeof ApiV1DashboardMetricsRoute
+  '/api/v1/scam-detector/results': typeof ApiV1ScamDetectorResultsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,6 +167,10 @@ export interface FileRouteTypes {
     | '/scam-messages'
     | '/spam-calls'
     | '/threats'
+    | '/api/v1/$entity'
+    | '/api/v1/$entity/$id'
+    | '/api/v1/dashboard/metrics'
+    | '/api/v1/scam-detector/results'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,6 +183,10 @@ export interface FileRouteTypes {
     | '/scam-messages'
     | '/spam-calls'
     | '/threats'
+    | '/api/v1/$entity'
+    | '/api/v1/$entity/$id'
+    | '/api/v1/dashboard/metrics'
+    | '/api/v1/scam-detector/results'
   id:
     | '__root__'
     | '/'
@@ -155,12 +200,19 @@ export interface FileRouteTypes {
     | '/_authenticated/scam-messages'
     | '/_authenticated/spam-calls'
     | '/_authenticated/threats'
+    | '/api/v1/$entity'
+    | '/api/v1/$entity/$id'
+    | '/api/v1/dashboard/metrics'
+    | '/api/v1/scam-detector/results'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiV1EntityRoute: typeof ApiV1EntityRouteWithChildren
+  ApiV1DashboardMetricsRoute: typeof ApiV1DashboardMetricsRoute
+  ApiV1ScamDetectorResultsRoute: typeof ApiV1ScamDetectorResultsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -242,6 +294,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChatbotRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/v1/$entity': {
+      id: '/api/v1/$entity'
+      path: '/api/v1/$entity'
+      fullPath: '/api/v1/$entity'
+      preLoaderRoute: typeof ApiV1EntityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/scam-detector/results': {
+      id: '/api/v1/scam-detector/results'
+      path: '/api/v1/scam-detector/results'
+      fullPath: '/api/v1/scam-detector/results'
+      preLoaderRoute: typeof ApiV1ScamDetectorResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/dashboard/metrics': {
+      id: '/api/v1/dashboard/metrics'
+      path: '/api/v1/dashboard/metrics'
+      fullPath: '/api/v1/dashboard/metrics'
+      preLoaderRoute: typeof ApiV1DashboardMetricsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/$entity/$id': {
+      id: '/api/v1/$entity/$id'
+      path: '/$id'
+      fullPath: '/api/v1/$entity/$id'
+      preLoaderRoute: typeof ApiV1EntityIdRouteImport
+      parentRoute: typeof ApiV1EntityRoute
+    }
   }
 }
 
@@ -270,11 +350,36 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface ApiV1EntityRouteChildren {
+  ApiV1EntityIdRoute: typeof ApiV1EntityIdRoute
+}
+
+const ApiV1EntityRouteChildren: ApiV1EntityRouteChildren = {
+  ApiV1EntityIdRoute: ApiV1EntityIdRoute,
+}
+
+const ApiV1EntityRouteWithChildren = ApiV1EntityRoute._addFileChildren(
+  ApiV1EntityRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiV1EntityRoute: ApiV1EntityRouteWithChildren,
+  ApiV1DashboardMetricsRoute: ApiV1DashboardMetricsRoute,
+  ApiV1ScamDetectorResultsRoute: ApiV1ScamDetectorResultsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
