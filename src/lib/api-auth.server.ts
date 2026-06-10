@@ -1,9 +1,9 @@
 // Shared bearer-token authentication for REST API routes.
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export interface AuthResult {
   userId: string;
-  supabase: ReturnType<typeof createClient>;
+  supabase: SupabaseClient;
 }
 
 export async function authenticateRequest(request: Request): Promise<AuthResult | Response> {
