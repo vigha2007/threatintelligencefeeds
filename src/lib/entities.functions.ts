@@ -47,7 +47,7 @@ export const createEntity = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
-    return { row };
+    return { row: row as EntityRow };
   });
 
 export const deleteEntity = createServerFn({ method: "POST" })
