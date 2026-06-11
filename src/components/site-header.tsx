@@ -1,11 +1,5 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Shield, LogOut, LayoutDashboard, MessageSquare, AlertTriangle, Link2, Phone, Mail, Globe, MessageCircle } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Shield, LayoutDashboard, MessageSquare, AlertTriangle, Link2, Phone, Mail, Globe, MessageCircle } from "lucide-react";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -19,21 +13,12 @@ const nav = [
 ] as const;
 
 export function SiteHeader() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-[#0A0F1F]/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
-        <Link to="/dashboard" className="flex items-center gap-2 text-white">
+        <Link to="/" className="flex items-center gap-2 text-white">
           <Shield className="h-5 w-5 text-[#00D4FF]" />
           <span className="hidden text-sm font-semibold sm:inline">Scam Detector AI</span>
         </Link>
@@ -55,18 +40,6 @@ export function SiteHeader() {
             );
           })}
         </nav>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-white">
-              Account
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={signOut}>
-              <LogOut className="mr-2 h-4 w-4" /> Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   );

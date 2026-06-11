@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Shield, ArrowLeft } from "lucide-react";
 import { CHATBOT_URL } from "@/lib/chatbot-config";
 
-export const Route = createFileRoute("/_authenticated/chatbot")({
+export const Route = createFileRoute("/chatbot")({
   head: () => ({
     meta: [
       { title: "Chatbot — Scam Detector AI" },

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { createClient } from "@supabase/supabase-js";
 
 type Row = { detected_at: string; severity: string };
 
@@ -7,10 +7,13 @@ function dayKey(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+function getSupabase() {
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+}
+
 export const getDashboardMetrics = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase } = context;
+  .handler(async () => {
+    const supabase = getSupabase();
     const now = new Date();
     const startOfToday = new Date(now);
     startOfToday.setUTCHours(0, 0, 0, 0);
