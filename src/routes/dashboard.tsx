@@ -23,7 +23,7 @@ const metricsQuery = () =>
     staleTime: 30_000,
   });
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
+export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Threat Intelligence Feeds — Scam Detector AI" },
