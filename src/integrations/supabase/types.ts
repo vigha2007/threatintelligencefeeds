@@ -24,7 +24,7 @@ export type Database = {
           sender: string
           severity: Database["public"]["Enums"]["threat_severity"]
           subject: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           category?: string | null
@@ -35,7 +35,7 @@ export type Database = {
           sender: string
           severity?: Database["public"]["Enums"]["threat_severity"]
           subject?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           category?: string | null
@@ -46,7 +46,7 @@ export type Database = {
           sender?: string
           severity?: Database["public"]["Enums"]["threat_severity"]
           subject?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -59,7 +59,7 @@ export type Database = {
           last_seen: string
           severity: Database["public"]["Enums"]["threat_severity"]
           threat_type: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           country?: string | null
@@ -69,7 +69,7 @@ export type Database = {
           last_seen?: string
           severity?: Database["public"]["Enums"]["threat_severity"]
           threat_type?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           country?: string | null
@@ -79,7 +79,7 @@ export type Database = {
           last_seen?: string
           severity?: Database["public"]["Enums"]["threat_severity"]
           threat_type?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -93,7 +93,7 @@ export type Database = {
           severity: Database["public"]["Enums"]["threat_severity"]
           status: string
           url: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           blocked_at?: string
@@ -104,7 +104,7 @@ export type Database = {
           severity?: Database["public"]["Enums"]["threat_severity"]
           status?: string
           url: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           blocked_at?: string
@@ -115,7 +115,7 @@ export type Database = {
           severity?: Database["public"]["Enums"]["threat_severity"]
           status?: string
           url?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -146,7 +146,7 @@ export type Database = {
           input_text: string
           raw_response: Json | null
           severity: Database["public"]["Enums"]["threat_severity"]
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           classification: string
@@ -156,7 +156,7 @@ export type Database = {
           input_text: string
           raw_response?: Json | null
           severity?: Database["public"]["Enums"]["threat_severity"]
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           classification?: string
@@ -166,7 +166,7 @@ export type Database = {
           input_text?: string
           raw_response?: Json | null
           severity?: Database["public"]["Enums"]["threat_severity"]
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -179,7 +179,7 @@ export type Database = {
           id: string
           sender: string | null
           severity: Database["public"]["Enums"]["threat_severity"]
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           channel?: string
@@ -189,7 +189,7 @@ export type Database = {
           id?: string
           sender?: string | null
           severity?: Database["public"]["Enums"]["threat_severity"]
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           channel?: string
@@ -199,7 +199,7 @@ export type Database = {
           id?: string
           sender?: string | null
           severity?: Database["public"]["Enums"]["threat_severity"]
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -212,7 +212,7 @@ export type Database = {
           phone_number: string
           reported_at: string
           severity: Database["public"]["Enums"]["threat_severity"]
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           country?: string | null
@@ -222,7 +222,7 @@ export type Database = {
           phone_number: string
           reported_at?: string
           severity?: Database["public"]["Enums"]["threat_severity"]
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           country?: string | null
@@ -232,7 +232,7 @@ export type Database = {
           phone_number?: string
           reported_at?: string
           severity?: Database["public"]["Enums"]["threat_severity"]
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -247,7 +247,7 @@ export type Database = {
           status: string
           title: string
           type: Database["public"]["Enums"]["threat_type"]
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -259,7 +259,7 @@ export type Database = {
           status?: string
           title: string
           type: Database["public"]["Enums"]["threat_type"]
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -271,7 +271,7 @@ export type Database = {
           status?: string
           title?: string
           type?: Database["public"]["Enums"]["threat_type"]
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
