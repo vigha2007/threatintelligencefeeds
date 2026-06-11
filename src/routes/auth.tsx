@@ -20,6 +20,26 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function friendlySignInError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("email not confirmed")) {
+    return "Your email isn't confirmed yet. Check your inbox for the verification link, or use Resend below.";
+  }
+  if (m.includes("invalid login credentials") || m.includes("invalid_credentials")) {
+    return "Invalid email or password.";
+  }
+  return message;
+}
+
+function friendlySignUpError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("already registered") || m.includes("already exists") || m.includes("user already")) {
+    return "An account with this email already exists. Please sign in instead.";
+  }
+  if (m.includes("password")) return message;
+  return message;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"signin" | "signup">("signin");
@@ -27,20 +47,28 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setNeedsConfirmation(false);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        setNeedsConfirmation(true);
+      }
+      return toast.error(friendlySignInError(error.message));
+    }
     navigate({ to: "/dashboard" });
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -49,9 +77,29 @@ function AuthPage() {
       },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Account created. You can sign in now.");
+    if (error) return toast.error(friendlySignUpError(error.message));
+    // If session is returned, email confirmation is disabled — sign in immediately.
+    if (data.session) {
+      toast.success("Account created. Welcome!");
+      navigate({ to: "/dashboard" });
+      return;
+    }
+    toast.success("Account created successfully. Please check your email and click the verification link before signing in.");
     setTab("signin");
+    setNeedsConfirmation(true);
+  };
+
+  const handleResend = async () => {
+    if (!email) return toast.error("Enter your email above first.");
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: window.location.origin + "/dashboard" },
+    });
+    setResending(false);
+    if (error) return toast.error(error.message);
+    toast.success("Confirmation email resent. Please check your inbox.");
   };
 
   return (
@@ -72,7 +120,7 @@ function AuthPage() {
             <h1 className="text-2xl font-bold text-white">Welcome</h1>
             <p className="mt-1 text-sm text-muted-foreground">Sign in to access Threat Intelligence.</p>
 
-            <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="mt-6">
+            <Tabs value={tab} onValueChange={(v) => { setTab(v as "signin" | "signup"); setNeedsConfirmation(false); }} className="mt-6">
               <TabsList className="grid w-full grid-cols-2 bg-white/5">
                 <TabsTrigger value="signin">Sign in</TabsTrigger>
                 <TabsTrigger value="signup">Sign up</TabsTrigger>
@@ -90,6 +138,18 @@ function AuthPage() {
                   <Button type="submit" disabled={loading} className="w-full">
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Sign in
                   </Button>
+                  {needsConfirmation && (
+                    <div className="rounded-md border border-white/10 bg-white/5 p-3 text-xs text-muted-foreground">
+                      Didn't get the email?
+                      <Button
+                        type="button" variant="link" size="sm"
+                        className="ml-1 h-auto p-0 text-[#00D4FF]"
+                        onClick={handleResend} disabled={resending}
+                      >
+                        {resending ? "Resending…" : "Resend confirmation email"}
+                      </Button>
+                    </div>
+                  )}
                 </form>
               </TabsContent>
               <TabsContent value="signup">
