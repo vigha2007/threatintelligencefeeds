@@ -1,16 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getDashboardMetrics } from "@/lib/dashboard.functions";
-import { authenticateRequest, jsonResponse, jsonError } from "@/lib/api-auth.server";
+import { createClient } from "@supabase/supabase-js";
+import { jsonResponse, jsonError } from "@/lib/api-auth.server";
+
+function getSupabase() {
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
+}
 
 export const Route = createFileRoute("/api/v1/dashboard/metrics")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
-        const auth = await authenticateRequest(request);
-        if (auth instanceof Response) return auth;
+      GET: async () => {
         try {
-          // Reuse server fn via direct call won't have request context — re-implement minimally
-          // by calling Supabase via the authenticated client.
+          const supabase = getSupabase();
           const tables = [
             { name: "threats", date: "detected_at" },
             { name: "phishing_urls", date: "blocked_at" },
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/api/v1/dashboard/metrics")({
           const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
           const results = await Promise.all(
             tables.map(async (t) => {
-              const { data, error } = await auth.supabase.from(t.name).select(`${t.date}, severity`).gte(t.date, since);
+              const { data, error } = await supabase.from(t.name).select(`${t.date}, severity`).gte(t.date, since);
               if (error) throw new Error(`${t.name}: ${error.message}`);
               return { table: t.name, rows: data ?? [] };
             })
@@ -40,6 +41,3 @@ export const Route = createFileRoute("/api/v1/dashboard/metrics")({
     },
   },
 });
-
-// Suppress unused-import warning for getDashboardMetrics (kept for future expansion):
-void getDashboardMetrics;
