@@ -1,8 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Shield, LayoutDashboard, MessageSquare, AlertTriangle, Link2, Phone, Mail, Globe, MessageCircle } from "lucide-react";
+import { Shield, LayoutDashboard, MessageSquare, AlertTriangle, Link2, Phone, Mail, Globe, MessageCircle, Radar } from "lucide-react";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/call-sms-intel", label: "Call/SMS Intel", icon: Radar },
   { to: "/threats", label: "Threats", icon: AlertTriangle },
   { to: "/phishing-urls", label: "Phishing", icon: Link2 },
   { to: "/spam-calls", label: "Calls", icon: Phone },
