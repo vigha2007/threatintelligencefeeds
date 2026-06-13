@@ -91,12 +91,13 @@ function IntelPage() {
     },
     onSuccess: (r) => {
       setPhoneResult(r);
-      setLocalLog((l) => [{
+      const item: LogItem = {
         id: crypto.randomUUID(), ts: r.checkedAt,
         analysisType: "Phone Number Analysis", threatCategory: r.threatCategory,
         target: r.phoneNumber, trustScore: r.trustScore, status: r.status,
         country: r.country, carrier: r.carrier, confidence: r.confidence,
-      }, ...l].slice(0, 50));
+      };
+      setLocalLog((l) => [item, ...l].slice(0, 50));
       const t = r.status === "scam" ? "error" : r.status === "suspicious" ? "warning" : "success";
       toast[t](`${r.phoneNumber} — ${r.threatCategory} (trust ${r.trustScore}%)`);
       qc.invalidateQueries({ queryKey: ["entity", "spam_calls"] });
