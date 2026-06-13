@@ -126,13 +126,14 @@ function IntelPage() {
     },
     onSuccess: ({ result, text }) => {
       setSmsResult(result);
-      setLocalLog((l) => [{
+      const item: LogItem = {
         id: crypto.randomUUID(), ts: result.checkedAt,
         analysisType: "SMS Analysis", threatCategory: result.category,
         target: text.slice(0, 60) + (text.length > 60 ? "…" : ""),
         trustScore: result.trustScore, status: result.status,
         country: "—", carrier: "—", confidence: result.confidence,
-      }, ...l].slice(0, 50));
+      };
+      setLocalLog((l) => [item, ...l].slice(0, 50));
       const t = result.status === "scam" ? "error" : result.status === "suspicious" ? "warning" : "success";
       toast[t](`SMS — ${result.category} (trust ${result.trustScore}%)`);
       qc.invalidateQueries({ queryKey: ["entity", "scam_messages"] });
