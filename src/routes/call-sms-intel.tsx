@@ -88,7 +88,7 @@ function IntelPage() {
     },
     onSuccess: (r) => {
       setPhoneResult(r);
-      setLocalLog((l) => [{ id: crypto.randomUUID(), ts: r.checkedAt, type: "Spam Call", target: r.phoneNumber, score: r.riskScore, status: r.status }, ...l].slice(0, 50));
+      setLocalLog((l) => [{ id: crypto.randomUUID(), ts: r.checkedAt, type: "Spam Call" as const, target: r.phoneNumber, score: r.riskScore, status: r.status }, ...l].slice(0, 50));
       toast[r.status === "scam" ? "error" : r.status === "suspicious" ? "warning" : "success"](`${r.phoneNumber} — ${statusStyles[r.status].label} (${r.riskScore}%)`);
       qc.invalidateQueries({ queryKey: ["entity", "spam_calls"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
@@ -117,7 +117,7 @@ function IntelPage() {
     },
     onSuccess: ({ result, text }) => {
       setSmsResult(result);
-      setLocalLog((l) => [{ id: crypto.randomUUID(), ts: result.checkedAt, type: "Scam SMS", target: text.slice(0, 60) + (text.length > 60 ? "…" : ""), score: result.riskScore, status: result.status }, ...l].slice(0, 50));
+      setLocalLog((l) => [{ id: crypto.randomUUID(), ts: result.checkedAt, type: "Scam SMS" as const, target: text.slice(0, 60) + (text.length > 60 ? "…" : ""), score: result.riskScore, status: result.status }, ...l].slice(0, 50));
       toast[result.status === "scam" ? "error" : result.status === "suspicious" ? "warning" : "success"](`SMS — ${result.category} (${result.riskScore}%)`);
       qc.invalidateQueries({ queryKey: ["entity", "scam_messages"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });

@@ -17,6 +17,7 @@ import { Route as MaliciousIpsRouteImport } from './routes/malicious-ips'
 import { Route as EmailScamsRouteImport } from './routes/email-scams'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ChatbotRouteImport } from './routes/chatbot'
+import { Route as CallSmsIntelRouteImport } from './routes/call-sms-intel'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiV1EntityRouteImport } from './routes/api/v1/$entity'
 import { Route as ApiV1ScamDetectorResultsRouteImport } from './routes/api/v1/scam-detector.results'
@@ -63,6 +64,11 @@ const ChatbotRoute = ChatbotRouteImport.update({
   path: '/chatbot',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CallSmsIntelRoute = CallSmsIntelRouteImport.update({
+  id: '/call-sms-intel',
+  path: '/call-sms-intel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -92,6 +98,7 @@ const ApiV1EntityIdRoute = ApiV1EntityIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/call-sms-intel': typeof CallSmsIntelRoute
   '/chatbot': typeof ChatbotRoute
   '/dashboard': typeof DashboardRoute
   '/email-scams': typeof EmailScamsRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/call-sms-intel': typeof CallSmsIntelRoute
   '/chatbot': typeof ChatbotRoute
   '/dashboard': typeof DashboardRoute
   '/email-scams': typeof EmailScamsRoute
@@ -123,6 +131,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/call-sms-intel': typeof CallSmsIntelRoute
   '/chatbot': typeof ChatbotRoute
   '/dashboard': typeof DashboardRoute
   '/email-scams': typeof EmailScamsRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/call-sms-intel'
     | '/chatbot'
     | '/dashboard'
     | '/email-scams'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/call-sms-intel'
     | '/chatbot'
     | '/dashboard'
     | '/email-scams'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/call-sms-intel'
     | '/chatbot'
     | '/dashboard'
     | '/email-scams'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CallSmsIntelRoute: typeof CallSmsIntelRoute
   ChatbotRoute: typeof ChatbotRoute
   DashboardRoute: typeof DashboardRoute
   EmailScamsRoute: typeof EmailScamsRoute
@@ -257,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatbotRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/call-sms-intel': {
+      id: '/call-sms-intel'
+      path: '/call-sms-intel'
+      fullPath: '/call-sms-intel'
+      preLoaderRoute: typeof CallSmsIntelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -309,6 +329,7 @@ const ApiV1EntityRouteWithChildren = ApiV1EntityRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CallSmsIntelRoute: CallSmsIntelRoute,
   ChatbotRoute: ChatbotRoute,
   DashboardRoute: DashboardRoute,
   EmailScamsRoute: EmailScamsRoute,
@@ -324,13 +345,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
