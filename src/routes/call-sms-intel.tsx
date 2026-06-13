@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone, MessageSquare, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion,
-  Globe, Signal, Clock, Link2, AlertTriangle, Activity,
+  Globe, Signal, Clock, Link2, AlertTriangle, Activity, Radar, Hash, Gauge,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,33 +15,37 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ParticlesBackground } from "@/components/particles-background";
 import {
   analyzePhone, analyzeSms, statusToSeverity,
-  type PhoneAnalysis, type SmsAnalysis, type RiskStatus,
+  type PhoneAnalysis, type SmsAnalysis, type TrustStatus,
 } from "@/lib/intel-analyzers";
 import { createEntity, listEntity } from "@/lib/entities.functions";
 
 export const Route = createFileRoute("/call-sms-intel")({
   head: () => ({
     meta: [
-      { title: "Call & SMS Intelligence — Scam Detector AI" },
-      { name: "description", content: "Analyze phone numbers and SMS content for scams, phishing, OTP fraud, and malicious links in real time." },
+      { title: "Phone & SMS Intelligence — Scam Detector AI" },
+      { name: "description", content: "Phone Number Intelligence and SMS scam detection with explainable trust scores, validation, and realistic telecom data." },
     ],
   }),
   component: IntelPage,
 });
 
-const statusStyles: Record<RiskStatus, { color: string; bg: string; border: string; label: string; icon: typeof ShieldAlert }> = {
+const statusStyles: Record<TrustStatus, { color: string; bg: string; border: string; label: string; icon: typeof ShieldAlert }> = {
   scam: { color: "#FF4D4D", bg: "rgba(255,77,77,0.12)", border: "rgba(255,77,77,0.5)", label: "Scam", icon: ShieldAlert },
   suspicious: { color: "#FFB020", bg: "rgba(255,176,32,0.12)", border: "rgba(255,176,32,0.5)", label: "Suspicious", icon: ShieldQuestion },
-  safe: { color: "#00FFA3", bg: "rgba(0,255,163,0.12)", border: "rgba(0,255,163,0.5)", label: "Safe", icon: ShieldCheck },
+  legitimate: { color: "#00FFA3", bg: "rgba(0,255,163,0.12)", border: "rgba(0,255,163,0.5)", label: "Legitimate", icon: ShieldCheck },
 };
 
 interface LogItem {
   id: string;
   ts: string;
-  type: "Spam Call" | "Scam SMS";
+  analysisType: "Phone Number Analysis" | "SMS Analysis";
+  threatCategory: string;
   target: string;
-  score: number;
-  status: RiskStatus;
+  trustScore: number;
+  status: TrustStatus;
+  country: string;
+  carrier: string;
+  confidence: number;
 }
 
 function IntelPage() {
@@ -55,7 +59,6 @@ function IntelPage() {
   const [smsResult, setSmsResult] = useState<SmsAnalysis | null>(null);
   const [localLog, setLocalLog] = useState<LogItem[]>([]);
 
-  // Pull recent rows from DB so log reflects persisted intel
   const recentCalls = useQuery({
     queryKey: ["entity", "spam_calls"],
     queryFn: () => list({ data: { entity: "spam_calls" } }),
@@ -69,7 +72,7 @@ function IntelPage() {
 
   const phoneMutation = useMutation({
     mutationFn: async (value: string) => {
-      await new Promise((r) => setTimeout(r, 700));
+      await new Promise((r) => setTimeout(r, 600));
       const result = analyzePhone(value);
       try {
         await create({
@@ -78,18 +81,24 @@ function IntelPage() {
             values: {
               phone_number: result.normalized || value,
               country: result.country,
-              severity: statusToSeverity(result.status, result.riskScore),
-              pattern: `${result.numberType} · ${result.carrier} · risk ${result.riskScore}% · ${result.reasons[0] ?? ""}`.slice(0, 500),
+              severity: statusToSeverity(result.status, result.trustScore),
+              pattern: `${result.threatCategory} · ${result.numberType} · ${result.carrier} · trust ${result.trustScore}%`.slice(0, 500),
             },
           },
         });
-      } catch { /* persistence is best-effort */ }
+      } catch { /* best-effort */ }
       return result;
     },
     onSuccess: (r) => {
       setPhoneResult(r);
-      setLocalLog((l) => [{ id: crypto.randomUUID(), ts: r.checkedAt, type: "Spam Call" as const, target: r.phoneNumber, score: r.riskScore, status: r.status }, ...l].slice(0, 50));
-      toast[r.status === "scam" ? "error" : r.status === "suspicious" ? "warning" : "success"](`${r.phoneNumber} — ${statusStyles[r.status].label} (${r.riskScore}%)`);
+      setLocalLog((l) => [{
+        id: crypto.randomUUID(), ts: r.checkedAt,
+        analysisType: "Phone Number Analysis", threatCategory: r.threatCategory,
+        target: r.phoneNumber, trustScore: r.trustScore, status: r.status,
+        country: r.country, carrier: r.carrier, confidence: r.confidence,
+      }, ...l].slice(0, 50));
+      const t = r.status === "scam" ? "error" : r.status === "suspicious" ? "warning" : "success";
+      toast[t](`${r.phoneNumber} — ${r.threatCategory} (trust ${r.trustScore}%)`);
       qc.invalidateQueries({ queryKey: ["entity", "spam_calls"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
     },
@@ -98,17 +107,16 @@ function IntelPage() {
 
   const smsMutation = useMutation({
     mutationFn: async (text: string) => {
-      await new Promise((r) => setTimeout(r, 700));
+      await new Promise((r) => setTimeout(r, 600));
       const result = analyzeSms(text);
       try {
         await create({
           data: {
             entity: "scam_messages",
             values: {
-              channel: "sms",
-              sender: "Unknown",
+              channel: "sms", sender: "Unknown",
               content: text.slice(0, 4000),
-              severity: statusToSeverity(result.status, result.riskScore),
+              severity: statusToSeverity(result.status, result.trustScore),
             },
           },
         });
@@ -117,37 +125,62 @@ function IntelPage() {
     },
     onSuccess: ({ result, text }) => {
       setSmsResult(result);
-      setLocalLog((l) => [{ id: crypto.randomUUID(), ts: result.checkedAt, type: "Scam SMS" as const, target: text.slice(0, 60) + (text.length > 60 ? "…" : ""), score: result.riskScore, status: result.status }, ...l].slice(0, 50));
-      toast[result.status === "scam" ? "error" : result.status === "suspicious" ? "warning" : "success"](`SMS — ${result.category} (${result.riskScore}%)`);
+      setLocalLog((l) => [{
+        id: crypto.randomUUID(), ts: result.checkedAt,
+        analysisType: "SMS Analysis", threatCategory: result.category,
+        target: text.slice(0, 60) + (text.length > 60 ? "…" : ""),
+        trustScore: result.trustScore, status: result.status,
+        country: "—", carrier: "—", confidence: result.confidence,
+      }, ...l].slice(0, 50));
+      const t = result.status === "scam" ? "error" : result.status === "suspicious" ? "warning" : "success";
+      toast[t](`SMS — ${result.category} (trust ${result.trustScore}%)`);
       qc.invalidateQueries({ queryKey: ["entity", "scam_messages"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Merge DB rows + local log into a unified table
+  // Merge DB rows + local log
   const dbLog: LogItem[] = [
-    ...((recentCalls.data?.rows ?? []) as Array<Record<string, unknown>>).map((r) => ({
-      id: `c-${String(r.id)}`,
-      ts: String(r.reported_at ?? new Date().toISOString()),
-      type: "Spam Call" as const,
-      target: String(r.phone_number ?? ""),
-      score: severityToScore(String(r.severity ?? "low")),
-      status: severityToStatus(String(r.severity ?? "low")),
-    })),
-    ...((recentMessages.data?.rows ?? []) as Array<Record<string, unknown>>).map((r) => ({
-      id: `m-${String(r.id)}`,
-      ts: String(r.detected_at ?? new Date().toISOString()),
-      type: "Scam SMS" as const,
-      target: String(r.content ?? "").slice(0, 60),
-      score: severityToScore(String(r.severity ?? "low")),
-      status: severityToStatus(String(r.severity ?? "low")),
-    })),
+    ...((recentCalls.data?.rows ?? []) as Array<Record<string, unknown>>).map((r) => {
+      const sev = String(r.severity ?? "low");
+      const status = severityToStatus(sev);
+      const pattern = String(r.pattern ?? "");
+      const cat = pattern.split(" · ")[0] || (status === "legitimate" ? "Legitimate" : "Unknown");
+      return {
+        id: `c-${String(r.id)}`,
+        ts: String(r.reported_at ?? new Date().toISOString()),
+        analysisType: "Phone Number Analysis" as const,
+        threatCategory: cat,
+        target: String(r.phone_number ?? ""),
+        trustScore: severityToTrust(sev),
+        status,
+        country: String(r.country ?? "Unknown"),
+        carrier: pattern.split(" · ")[2] ?? "Unknown",
+        confidence: 80,
+      };
+    }),
+    ...((recentMessages.data?.rows ?? []) as Array<Record<string, unknown>>).map((r) => {
+      const sev = String(r.severity ?? "low");
+      const status = severityToStatus(sev);
+      return {
+        id: `m-${String(r.id)}`,
+        ts: String(r.detected_at ?? new Date().toISOString()),
+        analysisType: "SMS Analysis" as const,
+        threatCategory: status === "legitimate" ? "Legitimate" : status === "suspicious" ? "Spam" : "Fraud",
+        target: String(r.content ?? "").slice(0, 60),
+        trustScore: severityToTrust(sev),
+        status,
+        country: "—",
+        carrier: "—",
+        confidence: 80,
+      };
+    }),
   ];
   const log = [...localLog, ...dbLog]
     .filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)
     .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime())
-    .slice(0, 25);
+    .slice(0, 30);
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -159,14 +192,15 @@ function IntelPage() {
           <div className="absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-[#00D4FF] opacity-20 blur-3xl" />
           <div className="relative">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#00D4FF]/40 bg-[#00D4FF]/10 px-3 py-1 text-xs font-semibold text-[#00D4FF]">
-              <Activity className="h-3 w-3" /> Call & SMS Intelligence Module
+              <Radar className="h-3 w-3" /> Threat Intelligence Module
             </div>
             <h1 className="mt-4 text-3xl font-bold text-white sm:text-4xl">
-              <span aria-hidden>📡</span>{" "}
-              <span className="bg-gradient-to-r from-[#00D4FF] via-[#7B61FF] to-[#00FFA3] bg-clip-text text-transparent">Spam Call & SMS Threat Analysis</span>
+              <span className="bg-gradient-to-r from-[#00D4FF] via-[#7B61FF] to-[#00FFA3] bg-clip-text text-transparent">
+                Phone Number Intelligence &amp; SMS Scam Detection
+              </span>
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Analyze suspicious phone numbers and SMS content. Results are stored and reflected in your live dashboard metrics.
+              Validate numbers against national numbering plans, resolve carrier &amp; line type, and detect SMS scams with explainable trust scoring.
             </p>
           </div>
         </motion.div>
@@ -180,8 +214,8 @@ function IntelPage() {
               <Phone className="h-5 w-5 text-[#00D4FF]" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Spam Call Detection</h2>
-              <p className="text-xs text-muted-foreground">Enter any phone number to validate and risk-score it.</p>
+              <h2 className="text-lg font-semibold text-white">Phone Number Intelligence</h2>
+              <p className="text-xs text-muted-foreground">Validate &amp; reputation-check any phone number — country code optional.</p>
             </div>
           </div>
 
@@ -194,7 +228,7 @@ function IntelPage() {
             className="flex gap-2"
           >
             <Input
-              placeholder="+1 415 555 0199"
+              placeholder="e.g. 9876543210 or +91 80 6527 3679"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               maxLength={32}
@@ -206,18 +240,21 @@ function IntelPage() {
           </form>
 
           <AnimatePresence mode="wait">
-            {phoneMutation.isPending && <ScanLoader key="pl" label="Querying threat intelligence feeds…" />}
+            {phoneMutation.isPending && <ScanLoader key="pl" label="Querying numbering plan &amp; intelligence feeds…" />}
             {phoneResult && !phoneMutation.isPending && (
               <motion.div key="pr" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-4">
-                <StatusBanner score={phoneResult.riskScore} status={phoneResult.status} />
+                <TrustBanner score={phoneResult.trustScore} status={phoneResult.status} category={phoneResult.threatCategory} />
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <InfoCell icon={Phone} label="Phone Number" value={phoneResult.phoneNumber} />
-                  <InfoCell icon={AlertTriangle} label="Spam Reports" value={phoneResult.reports.toLocaleString()} />
-                  <InfoCell icon={Globe} label="Country" value={phoneResult.country} />
+                  <InfoCell icon={Phone} label="Phone Number" value={phoneResult.normalized || phoneResult.phoneNumber} />
+                  <InfoCell icon={Hash} label="Threat Category" value={phoneResult.threatCategory} />
+                  <InfoCell icon={Globe} label="Country" value={phoneResult.countryCode ? `${phoneResult.country} (${phoneResult.countryCode})` : phoneResult.country} />
                   <InfoCell icon={Signal} label="Carrier" value={phoneResult.carrier} />
                   <InfoCell icon={Phone} label="Number Type" value={phoneResult.numberType} />
+                  <InfoCell icon={AlertTriangle} label="Spam Reports" value={phoneResult.reports.toLocaleString()} />
+                  <InfoCell icon={Gauge} label="Confidence" value={`${phoneResult.confidence}%`} />
                   <InfoCell icon={Clock} label="Last Checked" value={new Date(phoneResult.checkedAt).toLocaleTimeString()} />
                 </div>
+                <Explanation text={phoneResult.explanation} />
                 <ReasonList reasons={phoneResult.reasons} />
               </motion.div>
             )}
@@ -232,7 +269,7 @@ function IntelPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">SMS Scam Detection</h2>
-              <p className="text-xs text-muted-foreground">Paste SMS content to detect phishing, OTP scams, fraud & malicious links.</p>
+              <p className="text-xs text-muted-foreground">Detects lottery, OTP, banking, phishing &amp; investment scams — typo-tolerant.</p>
             </div>
           </div>
 
@@ -245,7 +282,7 @@ function IntelPage() {
             className="space-y-2"
           >
             <Textarea
-              placeholder="Your account has been suspended. Click here to verify: http://bit.ly/xyz"
+              placeholder="e.g. Congratulations! You won a lottry prize of $500000. Click here to claim."
               value={sms}
               onChange={(e) => setSms(e.target.value)}
               maxLength={4000}
@@ -258,13 +295,15 @@ function IntelPage() {
           </form>
 
           <AnimatePresence mode="wait">
-            {smsMutation.isPending && <ScanLoader key="sl" label="Scanning content & extracting indicators…" />}
+            {smsMutation.isPending && <ScanLoader key="sl" label="Scanning content &amp; extracting indicators…" />}
             {smsResult && !smsMutation.isPending && (
               <motion.div key="sr" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-4">
-                <StatusBanner score={smsResult.riskScore} status={smsResult.status} />
+                <TrustBanner score={smsResult.trustScore} status={smsResult.status} category={smsResult.category} />
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <InfoCell icon={AlertTriangle} label="Threat Level" value={smsResult.threatLevel} />
-                  <InfoCell icon={ShieldAlert} label="Category" value={smsResult.category} />
+                  <InfoCell icon={ShieldAlert} label="Threat Category" value={smsResult.category} />
+                  <InfoCell icon={Gauge} label="Confidence" value={`${Math.round(smsResult.confidence)}%`} />
+                  <InfoCell icon={Clock} label="Last Checked" value={new Date(smsResult.checkedAt).toLocaleTimeString()} />
                 </div>
                 {smsResult.urls.length > 0 && (
                   <div>
@@ -279,6 +318,7 @@ function IntelPage() {
                     </div>
                   </div>
                 )}
+                <Explanation text={smsResult.explanation} />
                 <ReasonList reasons={smsResult.reasons} />
               </motion.div>
             )}
@@ -286,7 +326,7 @@ function IntelPage() {
         </motion.div>
       </section>
 
-      {/* LIVE THREAT LOG */}
+      {/* THREAT INTELLIGENCE LOG */}
       <section className="mx-auto mt-10 max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass rounded-2xl p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -294,7 +334,7 @@ function IntelPage() {
               <Activity className="h-5 w-5 text-[#00FFA3]" />
               <h2 className="text-lg font-semibold text-white">Threat Intelligence Log</h2>
             </div>
-            <span className="text-xs text-muted-foreground">Live · Last {log.length} events</span>
+            <span className="text-xs text-muted-foreground">Live · {log.length} events</span>
           </div>
           {log.length === 0 ? (
             <div className="rounded-xl border border-white/5 bg-white/[0.02] p-8 text-center text-sm text-muted-foreground">
@@ -306,10 +346,14 @@ function IntelPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Timestamp</TableHead>
-                    <TableHead>Threat Type</TableHead>
+                    <TableHead>Analysis Type</TableHead>
+                    <TableHead>Threat Category</TableHead>
                     <TableHead>Phone / SMS</TableHead>
-                    <TableHead>Risk Score</TableHead>
+                    <TableHead>Trust</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Country</TableHead>
+                    <TableHead>Carrier</TableHead>
+                    <TableHead>Confidence</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -318,16 +362,20 @@ function IntelPage() {
                     return (
                       <TableRow key={row.id}>
                         <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{new Date(row.ts).toLocaleString()}</TableCell>
-                        <TableCell className="text-sm text-white/90">{row.type}</TableCell>
-                        <TableCell className="max-w-[320px] truncate text-sm text-white/80">{row.target}</TableCell>
+                        <TableCell className="text-xs text-white/80">{row.analysisType}</TableCell>
+                        <TableCell className="text-xs text-white/90">{row.threatCategory}</TableCell>
+                        <TableCell className="max-w-[260px] truncate text-sm text-white/80">{row.target}</TableCell>
                         <TableCell>
-                          <span className="font-mono text-sm font-semibold" style={{ color: s.color }}>{row.score}%</span>
+                          <span className="font-mono text-sm font-semibold" style={{ color: s.color }}>{row.trustScore}%</span>
                         </TableCell>
                         <TableCell>
                           <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
                             {s.label}
                           </span>
                         </TableCell>
+                        <TableCell className="text-xs text-white/70">{row.country}</TableCell>
+                        <TableCell className="text-xs text-white/70">{row.carrier}</TableCell>
+                        <TableCell className="text-xs text-white/70">{row.confidence}%</TableCell>
                       </TableRow>
                     );
                   })}
@@ -341,7 +389,7 @@ function IntelPage() {
   );
 }
 
-function StatusBanner({ score, status }: { score: number; status: RiskStatus }) {
+function TrustBanner({ score, status, category }: { score: number; status: TrustStatus; category: string }) {
   const s = statusStyles[status];
   const Icon = s.icon;
   return (
@@ -350,12 +398,12 @@ function StatusBanner({ score, status }: { score: number; status: RiskStatus }) 
         <div className="flex items-center gap-3">
           <Icon className="h-6 w-6" style={{ color: s.color }} />
           <div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Status</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Status · {category}</div>
             <div className="text-lg font-bold" style={{ color: s.color }}>{s.label}</div>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Risk Score</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Trust Score</div>
           <div className="text-3xl font-bold tabular-nums" style={{ color: s.color }}>{score}%</div>
         </div>
       </div>
@@ -377,10 +425,18 @@ function InfoCell({ icon: Icon, label, value }: { icon: typeof Phone; label: str
   );
 }
 
+function Explanation({ text }: { text: string }) {
+  return (
+    <div className="rounded-lg border border-[#00D4FF]/20 bg-[#00D4FF]/[0.04] p-3 text-xs leading-relaxed text-white/85">
+      <span className="font-semibold text-[#00D4FF]">Analyst summary: </span>{text}
+    </div>
+  );
+}
+
 function ReasonList({ reasons }: { reasons: string[] }) {
   return (
     <div>
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Why this was flagged</div>
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Evidence &amp; indicators</div>
       <ul className="space-y-1">
         {reasons.map((r, i) => (
           <li key={i} className="flex items-start gap-2 text-xs text-white/80">
@@ -405,9 +461,9 @@ function ScanLoader({ label }: { label: string }) {
   );
 }
 
-function severityToScore(sev: string): number {
-  return sev === "critical" ? 92 : sev === "high" ? 78 : sev === "medium" ? 55 : 18;
+function severityToTrust(sev: string): number {
+  return sev === "critical" ? 8 : sev === "high" ? 25 : sev === "medium" ? 52 : 85;
 }
-function severityToStatus(sev: string): RiskStatus {
-  return sev === "critical" || sev === "high" ? "scam" : sev === "medium" ? "suspicious" : "safe";
+function severityToStatus(sev: string): TrustStatus {
+  return sev === "critical" || sev === "high" ? "scam" : sev === "medium" ? "suspicious" : "legitimate";
 }
