@@ -14,9 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ParticlesBackground } from "@/components/particles-background";
 import {
-  analyzePhone, analyzeSms, statusToSeverity,
+  analyzeSms, buildPhoneAnalysis, statusToSeverity,
   type PhoneAnalysis, type SmsAnalysis, type TrustStatus,
 } from "@/lib/intel-analyzers";
+import { validatePhoneAbstract } from "@/lib/phone.functions";
 import { createEntity, listEntity } from "@/lib/entities.functions";
 
 export const Route = createFileRoute("/call-sms-intel")({
@@ -52,6 +53,7 @@ function IntelPage() {
   const qc = useQueryClient();
   const create = useServerFn(createEntity);
   const list = useServerFn(listEntity);
+  const validatePhone = useServerFn(validatePhoneAbstract);
 
   const [phone, setPhone] = useState("");
   const [sms, setSms] = useState("");
@@ -72,8 +74,8 @@ function IntelPage() {
 
   const phoneMutation = useMutation({
     mutationFn: async (value: string) => {
-      await new Promise((r) => setTimeout(r, 600));
-      const result = analyzePhone(value);
+      const api = await validatePhone({ data: { phone: value } });
+      const result = buildPhoneAnalysis(value, api);
       try {
         await create({
           data: {
