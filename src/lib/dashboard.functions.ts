@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 
 type Row = { detected_at: string; severity: string };
 
@@ -7,13 +6,8 @@ function dayKey(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function getSupabase() {
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
-}
-
 export const getDashboardMetrics = createServerFn({ method: "GET" })
   .handler(async () => {
-    const supabase = getSupabase();
     const now = new Date();
     const startOfToday = new Date(now);
     startOfToday.setUTCHours(0, 0, 0, 0);
@@ -24,23 +18,27 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
     since14d.setUTCHours(0, 0, 0, 0);
 
     const tables = [
-      { name: "threats", date: "detected_at" },
-      { name: "phishing_urls", date: "blocked_at" },
-      { name: "spam_calls", date: "reported_at" },
-      { name: "email_scams", date: "detected_at" },
-      { name: "malicious_ips", date: "last_seen" },
+      { name: "threats",       date: "detected_at" },
+      { name: "phishing_urls", date: "detected_at" },
+      { name: "spam_calls",    date: "detected_at" },
+      { name: "email_scams",   date: "detected_at" },
+      { name: "malicious_ips", date: "detected_at" },
       { name: "scam_messages", date: "detected_at" },
     ] as const;
 
-    // Pull rows per table within 14 days for trend + counts
+    // Pull rows per table from Java backend
     const fetches = await Promise.all(
       tables.map(async (t) => {
-        const { data, error } = await supabase
-          .from(t.name)
-          .select(`${t.date}, severity`)
-          .gte(t.date, since14d.toISOString());
-        if (error) throw new Error(`${t.name}: ${error.message}`);
-        return { table: t.name, dateCol: t.date, rows: (data ?? []) as unknown as Array<Record<string, string>> };
+        try {
+          const res = await fetch(`http://localhost:8080/api/v1/entity/${t.name}`);
+          if (!res.ok) return { table: t.name, dateCol: t.date, rows: [] };
+          const data = await res.json();
+          // The java backend might return different date columns, we will try to handle it.
+          const rows = data.rows ?? [];
+          return { table: t.name, dateCol: t.date, rows: rows as unknown as Array<Record<string, string>> };
+        } catch {
+          return { table: t.name, dateCol: t.date, rows: [] };
+        }
       })
     );
 
@@ -48,7 +46,10 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
     const metrics = fetches.map(({ table, dateCol, rows }) => {
       let today = 0, yesterday = 0, total = 0;
       for (const r of rows) {
-        const d = new Date(r[dateCol]);
+        // Fallback dates if exact column doesn't match
+        const rDate = r[dateCol] || r['detected_at'] || r['created_at'] || r['last_seen'] || r['analyzed_time'] || r['detected_time'];
+        if (!rDate) continue;
+        const d = new Date(rDate);
         total++;
         if (d >= startOfToday) today++;
         else if (d >= startOfYesterday) yesterday++;
@@ -59,9 +60,13 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
 
     // Severity distribution (all rows in window)
     const severity = { critical: 0, high: 0, medium: 0, low: 0 } as Record<string, number>;
-    for (const f of fetches) for (const r of f.rows) {
-      const s = r.severity as string;
-      if (s in severity) severity[s]++;
+    for (const f of fetches) {
+      for (const r of f.rows) {
+        // map threat_level to severity for malicious_ips
+        let s = (r.severity || r.threat_level || "low") as string;
+        s = s.toLowerCase();
+        if (s in severity) severity[s]++;
+      }
     }
 
     // 14-day trend (threats vs phishing)
@@ -76,7 +81,9 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
     for (const f of fetches) {
       const target = f.table === "phishing_urls" ? phishingByDay : threatsByDay;
       for (const r of f.rows) {
-        const k = dayKey(new Date(r[f.dateCol]));
+        const rDate = r[f.dateCol] || r['detected_at'] || r['created_at'] || r['last_seen'] || r['analyzed_time'] || r['detected_time'];
+        if (!rDate) continue;
+        const k = dayKey(new Date(rDate));
         if (k in target) target[k]++;
       }
     }
@@ -120,42 +127,31 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
     }));
 
     // Recent activity (last 60 min, joined and sorted)
-    const since60 = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
     type Recent = { type: string; desc: string; sev: string; time: string; sortKey: number };
     const recent: Recent[] = [];
-    const pushRows = async (
-      table: string,
-      label: string,
-      dateCol: string,
-      descCols: string[]
-    ) => {
-      const sb = supabase as unknown as { from: (t: string) => { select: (s: string) => { gte: (c: string, v: string) => { order: (c: string, o: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: unknown[] | null }> } } } } };
-      const { data } = await sb
-        .from(table)
-        .select(`${dateCol}, severity, ${descCols.join(",")}`)
-        .gte(dateCol, since60)
-        .order(dateCol, { ascending: false })
-        .limit(20);
-      for (const r of (data ?? []) as unknown as Array<Record<string, string>>) {
-        const desc = descCols.map((c) => r[c]).filter(Boolean).join(" — ") || label;
-        const d = new Date(r[dateCol]);
-        recent.push({
-          type: label,
-          desc,
-          sev: capitalize(r.severity),
-          time: relTime(d, now),
-          sortKey: d.getTime(),
-        });
-      }
-    };
-    await Promise.all([
-      pushRows("threats", "Threat", "detected_at", ["title", "description"]),
-      pushRows("phishing_urls", "Phishing URL", "blocked_at", ["url"]),
-      pushRows("spam_calls", "Suspicious Call", "reported_at", ["phone_number", "pattern"]),
-      pushRows("email_scams", "Email Scam", "detected_at", ["subject", "sender"]),
-      pushRows("malicious_ips", "Malicious IP", "last_seen", ["ip_address", "threat_type"]),
-      pushRows("scam_messages", "Scam Message", "detected_at", ["content"]),
-    ]);
+    
+    for (const f of fetches) {
+       let label = categoryLabels[f.table];
+       let descCols = ["description", "url", "caller_number", "subject", "ip_address", "message_text"];
+       for (const r of f.rows.slice(0, 20)) {
+         let desc = descCols.map(c => r[c]).filter(Boolean).join(" — ");
+         if (!desc) desc = label;
+         
+         const rDate = r[f.dateCol] || r['detected_at'] || r['created_at'] || r['last_seen'] || r['analyzed_time'] || r['detected_time'];
+         if (!rDate) continue;
+         const d = new Date(rDate);
+         
+         let sev = r.severity || r.threat_level || "Low";
+         
+         recent.push({
+           type: label,
+           desc,
+           sev: capitalize(sev as string),
+           time: relTime(d, now),
+           sortKey: d.getTime(),
+         });
+       }
+    }
     recent.sort((a, b) => b.sortKey - a.sortKey);
 
     return {

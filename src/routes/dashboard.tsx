@@ -38,7 +38,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const metricConfig = [
-  { key: "threats", icon: Shield, emoji: "🛡️", label: "Total Threats Detected", color: "#00D4FF" },
+  { key: "total_threats", icon: Shield, emoji: "🛡️", label: "Total Threats Detected", color: "#00D4FF" },
   { key: "scam_messages", icon: MessageSquare, emoji: "💬", label: "Scam Messages Analyzed", color: "#7B61FF" },
   { key: "spam_calls", icon: Phone, emoji: "📞", label: "Suspicious Calls Flagged", color: "#FFB020" },
   { key: "phishing_urls", icon: Link2, emoji: "🔗", label: "Phishing URLs Blocked", color: "#FF4D4D" },
@@ -93,7 +93,18 @@ function Dashboard() {
   const fetcher = useServerFn(getDashboardMetrics);
   const { data } = useSuspenseQuery({ ...metricsQuery(), queryFn: () => fetcher() });
 
-  const metricsByKey = Object.fromEntries(data.metrics.map((m) => [m.table, m]));
+  const metricsByKey: Record<string, any> = Object.fromEntries(data.metrics.map((m) => [m.table, m]));
+  
+  const totalToday = data.metrics.reduce((acc, m) => acc + m.today, 0);
+  const totalYesterday = data.metrics.reduce((acc, m) => acc + m.yesterday, 0);
+  const overallTotal = data.metrics.reduce((acc, m) => acc + m.total, 0);
+  const overallTrend = totalYesterday === 0 ? (totalToday > 0 ? 100 : 0) : ((totalToday - totalYesterday) / totalYesterday) * 100;
+  
+  metricsByKey["total_threats"] = {
+    total: overallTotal,
+    trend: Math.round(overallTrend * 10) / 10,
+  };
+
   const totalSev = severityMeta.reduce((a, b) => a + (data.severity[b.name] ?? 0), 0);
 
   return (

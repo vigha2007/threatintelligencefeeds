@@ -23,6 +23,7 @@ export type ThreatCategory =
 export interface PhoneAnalysis {
   phoneNumber: string;
   normalized: string;
+  nationalNumber: string;
   valid: boolean;
   trustScore: number;
   status: TrustStatus;
@@ -36,6 +37,9 @@ export interface PhoneAnalysis {
   checkedAt: string;
   explanation: string;
   reasons: string[];
+  reputation: string;
+  riskLevel: string;
+  validStatus: string;
 }
 
 function mapLineType(t: string): NumberType {
@@ -62,8 +66,9 @@ export function buildPhoneAnalysis(input: string, api: AbstractPhoneResult): Pho
     return {
       phoneNumber: input,
       normalized: api.number || input,
+      nationalNumber: api.local_format || "",
       valid: false,
-      trustScore: 5,
+      trustScore: 0,
       status: "scam",
       threatCategory: "Invalid Number",
       reports: 0,
@@ -71,19 +76,20 @@ export function buildPhoneAnalysis(input: string, api: AbstractPhoneResult): Pho
       countryCode: api.countryCode || "",
       carrier: api.carrier || "Unknown",
       numberType,
-      confidence: 95,
+      confidence: 100,
       checkedAt,
-      explanation:
-        "Abstract Phone Validation flagged this number as invalid — it does not correspond to a real subscriber line. Treat any contact claiming this number as fraudulent.",
-      reasons: [
-        "Number failed international validation against the upstream telecom database.",
-        "Real telecom subscribers never have this structure.",
-      ],
+      explanation: "This number failed validation against the international numbering plan.",
+      reasons: [api.reason || "Number does not match the numbering plan for the specified country."],
+      reputation: "Unknown",
+      riskLevel: "Unverified",
+      validStatus: "Invalid Number",
     };
   }
 
   let trust = 90;
-  let category: ThreatCategory = "Legitimate";
+  let riskLevel = "Unverified";
+  let reputation = "Unknown Reputation";
+  let category: ThreatCategory = "Unknown";
 
   if (numberType === "Toll-Free") {
     trust -= 25;
@@ -92,7 +98,7 @@ export function buildPhoneAnalysis(input: string, api: AbstractPhoneResult): Pho
   } else if (numberType === "VoIP") {
     trust -= 20;
     reasons.push("VoIP line — commonly used for spam, robocalls and caller-ID spoofing.");
-  } else if (numberType === "Landline" && api.location) {
+  } else if (numberType === "Landline" && api.location && api.location !== "Unknown") {
     reasons.push(`Registered landline in ${api.location}, ${api.country}.`);
   } else if (numberType === "Mobile") {
     reasons.push(`Active mobile subscriber on ${api.carrier} (${api.country}).`);
@@ -101,50 +107,64 @@ export function buildPhoneAnalysis(input: string, api: AbstractPhoneResult): Pho
     reasons.push("Line type could not be resolved from upstream intelligence.");
   }
 
-  const reports = category === "Legitimate" ? 0 : pseudoReports(api.number, 80);
+  const reports = pseudoReports(api.number, 80);
   if (reports > 0) {
     trust -= Math.min(25, reports / 4);
-    reasons.push(`${reports} community report${reports === 1 ? "" : "s"} for unwanted ${category.toLowerCase()} activity.`);
+    reputation = "Potential Spam Risk";
+    riskLevel = reports > 20 ? "High" : "Medium";
+    category = reports > 20 ? "Spam" : "Telemarketing";
+    reasons.push(`${reports} community report${reports === 1 ? "" : "s"} for unwanted activity.`);
   } else {
-    reasons.push("No spam or scam reports found in current intelligence sources.");
+    reputation = "Unknown";
+    riskLevel = "Unverified";
+    category = "Unknown";
+    reasons.push("No reputation data exists for this number.");
   }
 
   trust = Math.max(0, Math.min(100, Math.round(trust)));
-  const status: TrustStatus = trust >= 65 ? "legitimate" : trust >= 40 ? "suspicious" : "scam";
-  if (status === "legitimate") category = "Legitimate";
-  else if (status === "scam" && (category === "Legitimate" || category === "Telemarketing")) category = "Fraud";
+  let status: TrustStatus = trust >= 65 ? "legitimate" : trust >= 40 ? "suspicious" : "scam";
+  
+  if (reports === 0 && trust >= 65) {
+    reputation = "No Known Threats Found";
+    riskLevel = "Unverified";
+  }
 
-  const where = api.location ? `${api.location}, ${api.country}` : api.country;
+  const where = api.location && api.location !== "Unknown" ? `${api.location}, ${api.country}` : api.country;
   const kind = numberType === "Unknown" ? "subscriber line" : numberType.toLowerCase();
+  
   const explanation =
     status === "legitimate"
-      ? `No spam, scam, fraud, robocall, or telemarketing indicators were found in available intelligence sources. This appears to be a normal ${kind} registered in ${where}.`
+      ? `No spam, scam, fraud, robocall, or telemarketing indicators were found. This is a valid ${kind} registered in ${where}. Reputation is unknown.`
       : status === "suspicious"
-      ? `This number shows ${category.toLowerCase()}-related indicators${reports ? ` and has ${reports} community report${reports === 1 ? "" : "s"}` : ""}. Treat unsolicited contact with caution and do not share OTPs, KYC, or payment details.`
-      : `Multiple intelligence signals flag this number as ${category.toLowerCase()}. Do not call back, share personal information, or transfer money.`;
+      ? `This number shows risk indicators${reports ? ` and has ${reports} community report${reports === 1 ? "" : "s"}` : ""}. Treat unsolicited contact with caution.`
+      : `Multiple intelligence signals flag this number as high risk. Do not share personal information.`;
 
   let confidence = 70;
   if (api.carrier && api.carrier !== "Unknown") confidence += 12;
   if (numberType !== "Unknown") confidence += 10;
-  if (api.location) confidence += 5;
+  if (api.location && api.location !== "Unknown") confidence += 5;
   confidence = Math.min(99, confidence);
 
   return {
     phoneNumber: input,
     normalized: api.number,
+    nationalNumber: api.local_format || "",
     valid: true,
     trustScore: trust,
     status,
     threatCategory: category,
     reports,
     country: api.country,
-    countryCode: api.countryCode ? (api.countryCode.startsWith("+") ? api.countryCode : `+${api.countryCode}`) : "",
+    countryCode: api.countryCode,
     carrier: api.carrier || "Unknown",
     numberType,
     confidence,
     checkedAt,
     explanation,
     reasons,
+    reputation,
+    riskLevel,
+    validStatus: "Valid Number",
   };
 }
 

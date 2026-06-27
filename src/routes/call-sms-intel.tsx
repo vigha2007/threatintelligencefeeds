@@ -33,7 +33,7 @@ export const Route = createFileRoute("/call-sms-intel")({
 const statusStyles: Record<TrustStatus, { color: string; bg: string; border: string; label: string; icon: typeof ShieldAlert }> = {
   scam: { color: "#FF4D4D", bg: "rgba(255,77,77,0.12)", border: "rgba(255,77,77,0.5)", label: "Scam", icon: ShieldAlert },
   suspicious: { color: "#FFB020", bg: "rgba(255,176,32,0.12)", border: "rgba(255,176,32,0.5)", label: "Suspicious", icon: ShieldQuestion },
-  legitimate: { color: "#00FFA3", bg: "rgba(0,255,163,0.12)", border: "rgba(0,255,163,0.5)", label: "Legitimate", icon: ShieldCheck },
+  legitimate: { color: "#00FFA3", bg: "rgba(0,255,163,0.12)", border: "rgba(0,255,163,0.5)", label: "No Known Threats", icon: ShieldCheck },
 };
 
 interface LogItem {
@@ -250,13 +250,15 @@ function IntelPage() {
                 <TrustBanner score={phoneResult.trustScore} status={phoneResult.status} category={phoneResult.threatCategory} />
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <InfoCell icon={Phone} label="Phone Number" value={phoneResult.normalized || phoneResult.phoneNumber} />
-                  <InfoCell icon={Hash} label="Threat Category" value={phoneResult.threatCategory} />
+                  <InfoCell icon={ShieldCheck} label="Valid Status" value={phoneResult.validStatus} />
                   <InfoCell icon={Globe} label="Country" value={phoneResult.countryCode ? `${phoneResult.country} (${phoneResult.countryCode})` : phoneResult.country} />
+                  <InfoCell icon={Hash} label="National Number" value={phoneResult.nationalNumber || "Unknown"} />
                   <InfoCell icon={Signal} label="Carrier" value={phoneResult.carrier} />
                   <InfoCell icon={Phone} label="Number Type" value={phoneResult.numberType} />
+                  <InfoCell icon={ShieldQuestion} label="Reputation" value={phoneResult.reputation} />
+                  <InfoCell icon={AlertTriangle} label="Risk Level" value={phoneResult.riskLevel} />
                   <InfoCell icon={AlertTriangle} label="Spam Reports" value={phoneResult.reports.toLocaleString()} />
                   <InfoCell icon={Gauge} label="Confidence" value={`${phoneResult.confidence}%`} />
-                  <InfoCell icon={Clock} label="Last Checked" value={new Date(phoneResult.checkedAt).toLocaleTimeString()} />
                 </div>
                 <Explanation text={phoneResult.explanation} />
                 <ReasonList reasons={phoneResult.reasons} />

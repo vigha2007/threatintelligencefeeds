@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSuspenseQuery, useMutation, useQueryClient, queryOptions } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listEntity, createEntity, deleteEntity } from "@/lib/entities.functions";
 import { entities, type EntityKey, severityEnum } from "@/lib/threat-entities";
+
+const PAGE_SIZE = 100;
 
 const sevColors: Record<string, string> = {
   critical: "#FF4D4D", high: "#FFB020", medium: "#7B61FF", low: "#00FFA3",
@@ -38,6 +40,11 @@ export function EntityManagementPage({ entity }: { entity: EntityKey }) {
   const { data } = useSuspenseQuery({ ...listQuery(entity), queryFn: () => list({ data: { entity } }) });
 
   const [open, setOpen] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const allRows = data.rows ?? [];
+  const totalPages = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE));
+  const pagedRows = allRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const createMutation = useMutation({
     mutationFn: (values: Record<string, unknown>) => create({ data: { entity, values } }),
@@ -65,7 +72,9 @@ export function EntityManagementPage({ entity }: { entity: EntityKey }) {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">{def.label}</h1>
-          <p className="text-sm text-muted-foreground">Manage your {def.label.toLowerCase()} records. All dashboard metrics are computed from this data.</p>
+          <p className="text-sm text-muted-foreground">
+            {allRows.length.toLocaleString()} records — showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, allRows.length)} of {allRows.length.toLocaleString()}
+          </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -79,48 +88,92 @@ export function EntityManagementPage({ entity }: { entity: EntityKey }) {
       </motion.div>
 
       <div className="glass rounded-2xl p-4">
-        {data.rows.length === 0 ? (
+        {allRows.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">No records yet. Click "Add {def.singular}" to create one.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {def.fields.slice(0, 4).map((f) => <TableHead key={f.name}>{f.label}</TableHead>)}
-                  <TableHead>Severity</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.rows.map((row) => {
-                  const sev = String(row.severity ?? "");
-                  return (
-                    <TableRow key={String(row.id)}>
-                      {def.fields.slice(0, 4).map((f) => (
-                        <TableCell key={f.name} className="max-w-[260px] truncate text-white/90">
-                          {f.name === "severity" ? null : String(row[f.name] ?? "—")}
+          <>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {def.fields.slice(0, 4).map((f) => <TableHead key={f.name}>{f.label}</TableHead>)}
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagedRows.map((row) => {
+                    const sev = String(row.severity ?? "");
+                    return (
+                      <TableRow key={String(row.id)}>
+                        {def.fields.slice(0, 4).map((f) => (
+                          <TableCell key={f.name} className="max-w-[260px] truncate text-white/90">
+                            {f.name === "severity" ? null : String(row[f.name] ?? "—")}
+                          </TableCell>
+                        ))}
+                        <TableCell>
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: `${sevColors[sev]}1f`, color: sevColors[sev] }}>
+                            {sev}
+                          </span>
                         </TableCell>
-                      ))}
-                      <TableCell>
-                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: `${sevColors[sev]}1f`, color: sevColors[sev] }}>
-                          {sev}
-                        </span>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {row[def.dateColumn] ? new Date(String(row[def.dateColumn])).toLocaleString() : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate(String(row.id))}>
-                          {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-[#FF4D4D]" />}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                          {row[def.dateColumn] ? new Date(String(row[def.dateColumn])).toLocaleString() : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate(String(row.id))}>
+                            {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-[#FF4D4D]" />}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
+              <span className="text-xs text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setPage(1)}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  size-sm
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={page === totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(totalPages)}
+                >
+                  Last
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
