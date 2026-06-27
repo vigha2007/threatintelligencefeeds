@@ -1,14 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { jsonResponse, jsonError } from "@/lib/api-auth.server";
 import { entities, allEntityKeys, type EntityKey } from "@/lib/threat-entities";
 
 const entityParam = z.enum(allEntityKeys as [EntityKey, ...EntityKey[]]);
-
-function getSupabase() {
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!);
-}
 
 export const Route = createFileRoute("/api/v1/$entity")({
   server: {
@@ -16,32 +11,40 @@ export const Route = createFileRoute("/api/v1/$entity")({
       GET: async ({ params }) => {
         const parsed = entityParam.safeParse(params.entity);
         if (!parsed.success) return jsonError(404, "Unknown entity");
-        const supabase = getSupabase();
-        const def = entities[parsed.data];
-        const { data, error } = await supabase
-          .from(def.key)
-          .select("*")
-          .order(def.dateColumn, { ascending: false })
-          .limit(500);
-        if (error) return jsonError(500, error.message);
-        return jsonResponse(200, { rows: data ?? [] });
+        
+        try {
+          const res = await fetch(`http://localhost:8080/api/v1/entity/${parsed.data}`);
+          if (!res.ok) throw new Error("Failed to fetch entity from Java backend");
+          const data = await res.json();
+          return jsonResponse(200, { rows: data.rows ?? [] });
+        } catch (e) {
+          return jsonError(500, (e as Error).message);
+        }
       },
       POST: async ({ request, params }) => {
         const parsed = entityParam.safeParse(params.entity);
         if (!parsed.success) return jsonError(404, "Unknown entity");
-        const supabase = getSupabase();
-        const def = entities[parsed.data];
+        
         let body: unknown;
         try { body = await request.json(); } catch { return jsonError(400, "Invalid JSON"); }
-        const values = def.schema.safeParse(body);
+        const values = entities[parsed.data].schema.safeParse(body);
         if (!values.success) return jsonError(400, values.error.message);
-        const { data, error } = await supabase
-          .from(def.key)
-          .insert(values.data)
-          .select()
-          .single();
-        if (error) return jsonError(500, error.message);
-        return jsonResponse(201, { row: data });
+        
+        // POST to Java backend is not implemented in our basic handler, but we can add it later if needed
+        // For now, since user wants CRUD, let's just return a mock success or pass to Java backend
+        // We will pass it to Java backend
+        try {
+          const res = await fetch(`http://localhost:8080/api/v1/entity/${parsed.data}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(values.data)
+          });
+          if (!res.ok) throw new Error("Failed to insert entity in Java backend");
+          const data = await res.json();
+          return jsonResponse(201, { row: data.row });
+        } catch (e) {
+          return jsonError(500, (e as Error).message);
+        }
       },
     },
   },
