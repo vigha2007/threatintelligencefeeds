@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/v1/scam-detector/results")({
     handlers: {
       GET: async () => {
         try {
-          const res = await fetch(`http://localhost:8080/api/v1/entity/scam_detector_results`);
+          const res = await fetch(`http://localhost:8081/api/v1/entity/scam_detector_results`);
           if (!res.ok) return jsonResponse(200, { rows: [] });
           const json = await res.json();
           return jsonResponse(200, { rows: json.rows ?? [] });
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/v1/scam-detector/results")({
         const values = inputSchema.safeParse(body);
         if (!values.success) return jsonError(400, values.error.message);
         try {
-          const res = await fetch(`http://localhost:8080/api/v1/entity/scam_detector_results`, {
+          const res = await fetch(`http://localhost:8081/api/v1/entity/scam_detector_results`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(values.data)

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
         const id = idParam.safeParse(params.id);
         if (!e.success || !id.success) return jsonError(400, "Bad parameters");
         try {
-          const res = await fetch(`http://localhost:8080/api/v1/entity/${e.data}/${id.data}`);
+          const res = await fetch(`http://localhost:8081/api/v1/entity/${e.data}/${id.data}`);
           if (!res.ok) {
              if (res.status === 404) return jsonError(404, "Not found");
              throw new Error("Failed to fetch entity");
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
         const id = idParam.safeParse(params.id);
         if (!e.success || !id.success) return jsonError(400, "Bad parameters");
         try {
-          const res = await fetch(`http://localhost:8080/api/v1/entity/${e.data}/${id.data}`, {
+          const res = await fetch(`http://localhost:8081/api/v1/entity/${e.data}/${id.data}`, {
             method: 'DELETE'
           });
           if (!res.ok) throw new Error("Failed to delete entity");
@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
         if (!values.success) return jsonError(400, values.error.message);
         
         try {
-          const res = await fetch(`http://localhost:8080/api/v1/entity/${e.data}/${id.data}`, {
+          const res = await fetch(`http://localhost:8081/api/v1/entity/${e.data}/${id.data}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(values.data)

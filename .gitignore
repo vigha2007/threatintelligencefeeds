@@ -30,3 +30,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Java
+*.class
+bin/
+target/
+
+# ML files
+catboost_info/
+
+# Environment files
+.env

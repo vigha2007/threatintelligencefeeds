@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/v1/$entity")({
         if (!parsed.success) return jsonError(404, "Unknown entity");
         
         try {
-          const res = await fetch(`http://localhost:8080/api/v1/entity/${parsed.data}`);
+          const res = await fetch(`http://localhost:8081/api/v1/entity/${parsed.data}`);
           if (!res.ok) throw new Error("Failed to fetch entity from Java backend");
           const data = await res.json();
           return jsonResponse(200, { rows: data.rows ?? [] });
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/api/v1/$entity")({
         // For now, since user wants CRUD, let's just return a mock success or pass to Java backend
         // We will pass it to Java backend
         try {
-          const res = await fetch(`http://localhost:8080/api/v1/entity/${parsed.data}`, {
+          const res = await fetch(`http://localhost:8081/api/v1/entity/${parsed.data}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(values.data)

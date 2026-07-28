@@ -6,6 +6,9 @@ import java.util.*;
 
 public class EntityDao {
 
+    /** Default page size when the caller does not specify a limit. */
+    public static final int DEFAULT_PAGE_SIZE = 1000;
+
     private static final Map<String, String> TABLE_MAP = new HashMap<>();
 
     static {
@@ -23,33 +26,90 @@ public class EntityDao {
         return TABLE_MAP.containsKey(entity);
     }
 
-    public List<Map<String, Object>> list(String entity) throws SQLException {
-        String table = TABLE_MAP.get(entity);
-        List<Map<String, Object>> rows = new ArrayList<>();
-        String sql = entity.equals("users")
-                ? "SELECT * FROM users ORDER BY user_id DESC LIMIT 15000"
-                : "SELECT * FROM " + table + " ORDER BY id DESC LIMIT 15000";
+    /**
+     * Returns a paginated list of rows for the given entity.
+     * No artificial row ceiling — pages are controlled by limit/offset.
+     *
+     * @param entity logical entity name (key in TABLE_MAP)
+     * @param limit  maximum rows to return (≤ 0 means use DEFAULT_PAGE_SIZE)
+     * @param offset number of rows to skip (0-based)
+     */
+    public List<Map<String, Object>> list(String entity, int limit, int offset) throws SQLException {
+        String table  = TABLE_MAP.get(entity);
+        String idCol  = entity.equals("users") ? "user_id" : "id";
+        int    pageSize = (limit > 0) ? limit : DEFAULT_PAGE_SIZE;
 
+        String colsStr = "*";
+        if (entity.equals("phishing_urls")) {
+            colsStr = "*, detected_at AS blocked_at";
+        } else if (entity.equals("spam_calls")) {
+            colsStr = "*, detected_at AS reported_at";
+        } else if (entity.equals("malicious_ips")) {
+            colsStr = "*, detected_at AS last_seen";
+        }
+
+        String sql = "SELECT " + colsStr + " FROM " + table
+                   + " ORDER BY " + idCol + " DESC"
+                   + " LIMIT ? OFFSET ?";
+
+        List<Map<String, Object>> rows = new ArrayList<>();
         try (Connection conn = DatabaseConfig.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            ResultSetMetaData meta = rs.getMetaData();
-            int cols = meta.getColumnCount();
-            while (rs.next()) {
-                Map<String, Object> row = new LinkedHashMap<>();
-                for (int i = 1; i <= cols; i++) {
-                    row.put(meta.getColumnName(i), rs.getObject(i));
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, pageSize);
+            ps.setInt(2, offset);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                ResultSetMetaData meta = rs.getMetaData();
+                int cols = meta.getColumnCount();
+                while (rs.next()) {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    for (int i = 1; i <= cols; i++) {
+                        row.put(meta.getColumnName(i), rs.getObject(i));
+                    }
+                    rows.add(row);
                 }
-                rows.add(row);
             }
         }
         return rows;
     }
 
+    /**
+     * Convenience overload — returns the first page with the default page size.
+     * Replaces the old LIMIT 15000 call sites that did not need pagination.
+     */
+    public List<Map<String, Object>> list(String entity) throws SQLException {
+        return list(entity, DEFAULT_PAGE_SIZE, 0);
+    }
+
+    /**
+     * Returns the total row count for the given entity table.
+     * Callers can use this to compute total pages for pagination.
+     */
+    public long count(String entity) throws SQLException {
+        String table = TABLE_MAP.get(entity);
+        String sql   = "SELECT COUNT(*) FROM " + table;
+        try (Connection conn = DatabaseConfig.getConnection();
+             Statement  stmt = conn.createStatement();
+             ResultSet  rs   = stmt.executeQuery(sql)) {
+            return rs.next() ? rs.getLong(1) : 0L;
+        }
+    }
+
     public Map<String, Object> getById(String entity, String id) throws SQLException {
         String table = TABLE_MAP.get(entity);
         String idCol = entity.equals("users") ? "user_id" : "id";
-        String sql = "SELECT * FROM " + table + " WHERE " + idCol + " = ?";
+
+        String colsStr = "*";
+        if (entity.equals("phishing_urls")) {
+            colsStr = "*, detected_at AS blocked_at";
+        } else if (entity.equals("spam_calls")) {
+            colsStr = "*, detected_at AS reported_at";
+        } else if (entity.equals("malicious_ips")) {
+            colsStr = "*, detected_at AS last_seen";
+        }
+
+        String sql = "SELECT " + colsStr + " FROM " + table + " WHERE " + idCol + " = ?";
 
         try (Connection conn = DatabaseConfig.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

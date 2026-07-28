@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { SiteHeader } from "@/components/site-header";
+import { Sidebar, TopHeader } from "@/components/site-header";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -94,6 +94,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       {
+        rel: "preconnect",
+        href: "https://fonts.googleapis.com",
+      },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap",
+      },
+      {
         rel: "stylesheet",
         href: appCss,
       },
@@ -124,8 +137,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SiteHeader />
-      <Outlet />
+      <div className="flex min-h-screen w-full bg-[#F2EEE8]">
+        <Sidebar />
+        <div className="flex flex-1 flex-col min-w-0">
+          <TopHeader />
+          <main className="flex-grow">
+            <Outlet />
+          </main>
+        </div>
+      </div>
       <Toaster />
     </QueryClientProvider>
   );

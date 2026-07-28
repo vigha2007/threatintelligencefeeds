@@ -57,8 +57,29 @@ public class EntityHandler implements HttpHandler {
                     if (row == null) sendJson(exchange, 404, Map.of("error", "Not found"));
                     else sendJson(exchange, 200, Map.of("row", row));
                 } else {
-                    List<Map<String, Object>> rows = dao.list(entity);
-                    sendJson(exchange, 200, Map.of("rows", rows));
+                    // ── Pagination via query string: ?limit=N&offset=M ──────
+                    String query  = exchange.getRequestURI().getQuery();
+                    int    limit  = com.threatintel.dao.EntityDao.DEFAULT_PAGE_SIZE;
+                    int    offset = 0;
+                    if (query != null) {
+                        for (String param : query.split("&")) {
+                            String[] kv = param.split("=", 2);
+                            if (kv.length == 2) {
+                                try {
+                                    if ("limit".equals(kv[0]))  limit  = Integer.parseInt(kv[1]);
+                                    if ("offset".equals(kv[0])) offset = Integer.parseInt(kv[1]);
+                                } catch (NumberFormatException ignored) {}
+                            }
+                        }
+                    }
+                    List<Map<String, Object>> rows  = dao.list(entity, limit, offset);
+                    long                      total = dao.count(entity);
+                    sendJson(exchange, 200, Map.of(
+                        "rows",   rows,
+                        "total",  total,
+                        "limit",  limit,
+                        "offset", offset
+                    ));
                 }
             } else if ("POST".equals(method)) {
                 Map<String, Object> body = readBody(exchange);

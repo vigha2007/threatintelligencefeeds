@@ -1,0 +1,14 @@
+pandas
+numpy
+scikit-learn
+xgboost
+catboost
+flask
+flask-cors
+joblib
+matplotlib
+seaborn
+tldextract
+datasets
+requests
+mysql-connector-python

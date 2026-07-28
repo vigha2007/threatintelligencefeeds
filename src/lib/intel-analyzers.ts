@@ -40,6 +40,8 @@ export interface PhoneAnalysis {
   reputation: string;
   riskLevel: string;
   validStatus: string;
+  /** Where the result originated — used to show the source badge in the UI. */
+  source: "Database Match" | "AI Analysis";
 }
 
 function mapLineType(t: string): NumberType {
@@ -68,21 +70,25 @@ export function buildPhoneAnalysis(input: string, api: AbstractPhoneResult): Pho
       normalized: api.number || input,
       nationalNumber: api.local_format || "",
       valid: false,
-      trustScore: 0,
-      status: "scam",
+      trustScore: 30,
+      status: "suspicious",
       threatCategory: "Invalid Number",
       reports: 0,
       country: api.country || "Unknown",
       countryCode: api.countryCode || "",
       carrier: api.carrier || "Unknown",
       numberType,
-      confidence: 100,
+      confidence: 60,
       checkedAt,
-      explanation: "This number failed validation against the international numbering plan.",
-      reasons: [api.reason || "Number does not match the numbering plan for the specified country."],
-      reputation: "Unknown",
+      explanation: "This number does not conform to the international numbering plan and cannot be verified or reputation-checked. It may be a spoofed caller ID, a misconfigured dialer, or simply a typo — it cannot be confirmed as malicious without additional evidence.",
+      reasons: [
+        api.reason || "Number does not match the numbering plan for the specified country.",
+        "Invalid numbers are sometimes associated with spoofed caller IDs, but this alone is not sufficient to classify the number as a scam.",
+      ],
+      reputation: "Unverifiable",
       riskLevel: "Unverified",
       validStatus: "Invalid Number",
+      source: "AI Analysis",
     };
   }
 
@@ -165,6 +171,7 @@ export function buildPhoneAnalysis(input: string, api: AbstractPhoneResult): Pho
     reputation,
     riskLevel,
     validStatus: "Valid Number",
+    source: "AI Analysis",
   };
 }
 
@@ -181,6 +188,8 @@ export interface SmsAnalysis {
   confidence: number;
   checkedAt: string;
   explanation: string;
+  /** Where the result originated — used to show the source badge in the UI. */
+  source: "Database Match" | "AI Analysis";
 }
 
 // OTP / legitimate-transaction indicators
@@ -284,6 +293,7 @@ export function analyzeSms(text: string): SmsAnalysis {
         checkedAt,
         explanation:
           "This looks like an OTP / verification message, but the inclusion of a URL is unusual for legitimate OTP delivery. Verify the sender before tapping any link.",
+        source: "AI Analysis",
       };
     }
     const trust = 90;
@@ -301,6 +311,7 @@ export function analyzeSms(text: string): SmsAnalysis {
       checkedAt,
       explanation:
         "This appears to be a legitimate one-time-password / verification message. No scam, phishing, or social-engineering indicators were detected.",
+      source: "AI Analysis",
     };
   }
 
@@ -361,6 +372,7 @@ export function analyzeSms(text: string): SmsAnalysis {
       confidence: 80,
       checkedAt,
       explanation: "No scam, phishing, fraud, or social-engineering indicators were detected in this message.",
+      source: "AI Analysis",
     };
   }
 
@@ -390,6 +402,7 @@ export function analyzeSms(text: string): SmsAnalysis {
     confidence: Math.min(99, 60 + Math.round(risk / 3)),
     checkedAt,
     explanation,
+    source: "AI Analysis",
   };
 }
 

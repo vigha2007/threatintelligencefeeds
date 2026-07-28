@@ -1,0 +1,10 @@
+ip_catboost Classification Report (80:20)
+==================================================
+              precision    recall  f1-score   support
+
+      Benign       0.80      0.92      0.86     13000
+   Malicious       0.97      0.90      0.93     30333
+
+    accuracy                           0.91     43333
+   macro avg       0.88      0.91      0.90     43333
+weighted avg       0.92      0.91      0.91     43333

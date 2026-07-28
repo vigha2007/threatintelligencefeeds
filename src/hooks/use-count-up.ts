@@ -1,11 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function useCountUp(target: number, duration = 1800) {
   const [val, setVal] = useState(0);
-  const started = useRef(false);
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
     const start = performance.now();
     let raf = 0;
     const tick = (now: number) => {

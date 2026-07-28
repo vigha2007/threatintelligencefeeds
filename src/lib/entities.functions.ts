@@ -9,12 +9,27 @@ type EntityRow = { [k: string]: Json };
 const entityKeySchema = z.enum(allEntityKeys as [EntityKey, ...EntityKey[]]);
 
 export const listEntity = createServerFn({ method: "GET" })
-  .validator((d: { entity: EntityKey }) => z.object({ entity: entityKeySchema }).parse(d))
+  .validator((d: { entity: EntityKey; limit?: number; offset?: number }) =>
+    z.object({
+      entity: entityKeySchema,
+      limit:  z.number().int().positive().optional(),
+      offset: z.number().int().min(0).optional(),
+    }).parse(d)
+  )
   .handler(async ({ data }) => {
-    const res = await fetch(`http://localhost:8080/api/v1/entity/${data.entity}`);
+    const limit  = data.limit  ?? 200;
+    const offset = data.offset ?? 0;
+    const res = await fetch(
+      `http://localhost:8081/api/v1/entity/${data.entity}?limit=${limit}&offset=${offset}`
+    );
     if (!res.ok) throw new Error("Failed to fetch from Java backend");
     const json = await res.json();
-    return { rows: (json.rows ?? []) as EntityRow[] };
+    return {
+      rows:   (json.rows  ?? []) as EntityRow[],
+      total:  (json.total ?? 0)  as number,
+      limit,
+      offset,
+    };
   });
 
 export const createEntity = createServerFn({ method: "POST" })
@@ -25,7 +40,7 @@ export const createEntity = createServerFn({ method: "POST" })
     const def = entities[data.entity];
     const parsed = def.schema.parse(data.values);
 
-    const res = await fetch(`http://localhost:8080/api/v1/entity/${data.entity}`, {
+    const res = await fetch(`http://localhost:8081/api/v1/entity/${data.entity}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(parsed)
@@ -40,7 +55,7 @@ export const deleteEntity = createServerFn({ method: "POST" })
     z.object({ entity: entityKeySchema, id: z.union([z.string(), z.number()]).transform(String) }).parse(d)
   )
   .handler(async ({ data }) => {
-    const res = await fetch(`http://localhost:8080/api/v1/entity/${data.entity}/${data.id}`, {
+    const res = await fetch(`http://localhost:8081/api/v1/entity/${data.entity}/${data.id}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error("Failed to delete entity");

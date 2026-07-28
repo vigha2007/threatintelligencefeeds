@@ -32,7 +32,7 @@ public class Main {
         }
 
         // Start the server
-        int port = 8080;
+        int port = 8081;
         AppServer server = new AppServer(port);
         server.start();
     }

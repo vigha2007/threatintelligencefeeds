@@ -1,0 +1,62 @@
+{
+    "80:20": {
+        "XGBoost": {
+            "accuracy": 0.906688,
+            "precision": 0.883356,
+            "recall": 0.906769,
+            "f1": 0.894909,
+            "roc_auc": 0.973484,
+            "train_time_s": 221.148,
+            "predict_time_s": 3.0172
+        },
+        "CatBoost": {
+            "accuracy": 0.905535,
+            "precision": 0.886604,
+            "recall": 0.899438,
+            "f1": 0.892975,
+            "roc_auc": 0.971637,
+            "train_time_s": 915.045,
+            "predict_time_s": 1.0604
+        }
+    },
+    "70:30": {
+        "XGBoost": {
+            "accuracy": 0.907135,
+            "precision": 0.884846,
+            "recall": 0.905957,
+            "f1": 0.895277,
+            "roc_auc": 0.973945,
+            "train_time_s": 405.633,
+            "predict_time_s": 3.7454
+        },
+        "CatBoost": {
+            "accuracy": 0.905709,
+            "precision": 0.886993,
+            "recall": 0.899386,
+            "f1": 0.893146,
+            "roc_auc": 0.971669,
+            "train_time_s": 1276.393,
+            "predict_time_s": 1.3357
+        }
+    },
+    "60:40": {
+        "XGBoost": {
+            "accuracy": 0.907202,
+            "precision": 0.883644,
+            "recall": 0.907736,
+            "f1": 0.895528,
+            "roc_auc": 0.973802,
+            "train_time_s": 373.47,
+            "predict_time_s": 4.7989
+        },
+        "CatBoost": {
+            "accuracy": 0.905883,
+            "precision": 0.88704,
+            "recall": 0.899779,
+            "f1": 0.893364,
+            "roc_auc": 0.971791,
+            "train_time_s": 1437.921,
+            "predict_time_s": 3.4086
+        }
+    }
+}

@@ -6,7 +6,7 @@ export const Route = createFileRoute("/api/v1/dashboard/metrics")({
     handlers: {
       GET: async () => {
         try {
-          const res = await fetch("http://localhost:8080/api/v1/dashboard/metrics");
+          const res = await fetch("http://localhost:8081/api/v1/dashboard/metrics");
           if (!res.ok) throw new Error("Failed to fetch metrics from Java backend");
           const data = await res.json();
           return jsonResponse(200, data);

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone, MessageSquare, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion,
   Globe, Signal, Clock, Link2, AlertTriangle, Activity, Radar, Hash, Gauge,
+  Database, Cpu,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ import {
 } from "@/lib/intel-analyzers";
 import { validatePhoneAbstract } from "@/lib/phone.functions";
 import { createEntity, listEntity } from "@/lib/entities.functions";
+import { lookupPhoneInDb, lookupSmsInDb, logSearch } from "@/lib/db-lookup.functions";
+
 
 export const Route = createFileRoute("/call-sms-intel")({
   head: () => ({
@@ -31,9 +34,9 @@ export const Route = createFileRoute("/call-sms-intel")({
 });
 
 const statusStyles: Record<TrustStatus, { color: string; bg: string; border: string; label: string; icon: typeof ShieldAlert }> = {
-  scam: { color: "#FF4D4D", bg: "rgba(255,77,77,0.12)", border: "rgba(255,77,77,0.5)", label: "Scam", icon: ShieldAlert },
-  suspicious: { color: "#FFB020", bg: "rgba(255,176,32,0.12)", border: "rgba(255,176,32,0.5)", label: "Suspicious", icon: ShieldQuestion },
-  legitimate: { color: "#00FFA3", bg: "rgba(0,255,163,0.12)", border: "rgba(0,255,163,0.5)", label: "No Known Threats", icon: ShieldCheck },
+  scam: { color: "#E05A52", bg: "rgba(224,90,82,0.06)", border: "rgba(224,90,82,0.2)", label: "Scam / Threat Detected", icon: ShieldAlert },
+  suspicious: { color: "#E8A23C", bg: "rgba(232,162,60,0.06)", border: "rgba(232,162,60,0.2)", label: "Suspicious Activity", icon: ShieldQuestion },
+  legitimate: { color: "#34A853", bg: "rgba(52,168,83,0.06)", border: "rgba(52,168,83,0.2)", label: "No Active Threats", icon: ShieldCheck },
 };
 
 interface LogItem {
@@ -47,6 +50,102 @@ interface LogItem {
   country: string;
   carrier: string;
   confidence: number;
+  sourceType: "DB" | "AI";
+}
+
+
+// ---------------------------------------------------------------------------
+// DB row → PhoneAnalysis / SmsAnalysis mappers
+// The database is the source of truth. We read values EXACTLY as stored.
+// ---------------------------------------------------------------------------
+import type { DbPhoneRecord, DbSmsRecord } from "@/lib/db-lookup.functions";
+
+function severityToTrustDb(sev: string): number {
+  return sev === "critical" ? 8 : sev === "high" ? 25 : sev === "medium" ? 52 : 85;
+}
+function severityToStatusDb(sev: string): TrustStatus {
+  return sev === "critical" || sev === "high" ? "scam" : sev === "medium" ? "suspicious" : "legitimate";
+}
+function severityToThreatLevelDb(sev: string): "Low" | "Medium" | "High" | "Critical" {
+  return sev === "critical" ? "Critical" : sev === "high" ? "High" : sev === "medium" ? "Medium" : "Low";
+}
+
+function parsePattern(pattern: string | null) {
+  // Pattern stored as "Category · Type · Carrier · trust X%"
+  const parts = (pattern ?? "").split(" · ");
+  return {
+    category:   (parts[0] || "Unknown") as import("@/lib/intel-analyzers").ThreatCategory,
+    numberType: (parts[1] || "Unknown") as import("@/lib/intel-analyzers").NumberType,
+    carrier:    parts[2] || "Unknown",
+    trustScore: parseInt(parts[3]?.replace(/[^0-9]/g, "") ?? "", 10) || -1,
+  };
+}
+
+function dbPhoneToAnalysis(hit: DbPhoneRecord): import("@/lib/intel-analyzers").PhoneAnalysis {
+  const { category, numberType, carrier, trustScore: patternTrust } = parsePattern(hit.pattern);
+  const trust = patternTrust >= 0 ? patternTrust : severityToTrustDb(hit.severity);
+  const status = severityToStatusDb(hit.severity);
+  const checkedAt = hit.reported_at ?? hit.detected_at ?? new Date().toISOString();
+  return {
+    phoneNumber:    hit.phone_number,
+    normalized:     hit.phone_number,
+    nationalNumber: hit.phone_number,
+    valid:          true,
+    trustScore:     trust,
+    status,
+    threatCategory: category,
+    reports:        0,
+    country:        hit.country ?? "Unknown",
+    countryCode:    "",
+    carrier,
+    numberType,
+    confidence:     100,
+    checkedAt,
+    explanation:    `This phone number was found in the threat database with severity “${hit.severity}”. The information displayed is taken directly from the database record and has not been modified.`,
+    reasons:        [
+      `Database record ID: ${hit.id}.`,
+      `Stored severity: ${hit.severity}.`,
+      hit.pattern ? `Pattern: ${hit.pattern}.` : "No additional pattern data.",
+    ],
+    reputation:     status === "scam" ? "Known Threat" : status === "suspicious" ? "Suspicious" : "Verified Safe",
+    riskLevel:      severityToThreatLevelDb(hit.severity),
+    validStatus:    "Database Record",
+    source:         "Database Match",
+  };
+}
+
+function dbSmsToAnalysis(hit: DbSmsRecord): import("@/lib/intel-analyzers").SmsAnalysis {
+  const status = severityToStatusDb(hit.severity);
+  const checkedAt = hit.detected_at ?? new Date().toISOString();
+  // Derive category from severity + content keywords
+  let category: import("@/lib/intel-analyzers").SmsCategory = "Unknown";
+  const lower = hit.content.toLowerCase();
+  if (/lottery|prize|winner|won|jackpot|lucky/.test(lower)) category = "Lottery Scam";
+  else if (/bank|account|kyc|suspended|blocked/.test(lower)) category = "Banking Fraud";
+  else if (/invest|return|profit|crypto|double/.test(lower)) category = "Fraud";
+  else if (/otp|verification code|passcode/.test(lower)) category = "OTP Scam";
+  else if (/phish|verify your|click the link/.test(lower)) category = "Phishing";
+  else if (status === "scam") category = "Fraud";
+  else if (status === "suspicious") category = "Spam";
+  else category = "Legitimate";
+
+  return {
+    trustScore:  severityToTrustDb(hit.severity),
+    status,
+    threatLevel: severityToThreatLevelDb(hit.severity),
+    category,
+    reasons: [
+      `Database record ID: ${hit.id}.`,
+      `Stored severity: ${hit.severity}.`,
+      `Channel: ${hit.channel}${hit.sender ? ` | Sender: ${hit.sender}` : ""}.`,
+      "This result is taken directly from the database and has not been modified.",
+    ],
+    urls:        [],
+    confidence:  100,
+    checkedAt,
+    explanation: `This SMS was found in the threat database (ID: ${hit.id}) with severity “${hit.severity}”. The result is taken directly from the database record.`,
+    source:      "Database Match",
+  };
 }
 
 function IntelPage() {
@@ -54,6 +153,10 @@ function IntelPage() {
   const create = useServerFn(createEntity);
   const list = useServerFn(listEntity);
   const validatePhone = useServerFn(validatePhoneAbstract);
+  const dbPhoneLookup = useServerFn(lookupPhoneInDb);
+  const dbSmsLookup   = useServerFn(lookupSmsInDb);
+  const logSearchCall = useServerFn(logSearch);
+
 
   const [phone, setPhone] = useState("");
   const [sms, setSms] = useState("");
@@ -74,8 +177,38 @@ function IntelPage() {
 
   const phoneMutation = useMutation({
     mutationFn: async (value: string) => {
+      // ── STEP 1: Check database first ────────────────────────────────────
+      const dbHit = await dbPhoneLookup({ data: { phone: value } });
+      if (dbHit.found) {
+        const res = dbPhoneToAnalysis(dbHit);
+        try {
+          await logSearchCall({
+            data: {
+              module: "Phone",
+              input: value,
+              dbMatch: true,
+              aiUsed: false,
+              result: res.threatCategory,
+            },
+          });
+        } catch { /* best-effort */ }
+        return res;
+      }
+
+      // ── STEP 2: No DB match — run existing AI analysis ──────────────────
       const api = await validatePhone({ data: { phone: value } });
       const result = buildPhoneAnalysis(value, api);
+      try {
+        await logSearchCall({
+          data: {
+            module: "Phone",
+            input: value,
+            dbMatch: false,
+            aiUsed: true,
+            result: result.threatCategory,
+          },
+        });
+      } catch { /* best-effort */ }
       try {
         await create({
           data: {
@@ -98,128 +231,164 @@ function IntelPage() {
         analysisType: "Phone Number Analysis", threatCategory: r.threatCategory,
         target: r.phoneNumber, trustScore: r.trustScore, status: r.status,
         country: r.country, carrier: r.carrier, confidence: r.confidence,
+        sourceType: r.source === "Database Match" ? "DB" : "AI",
       };
       setLocalLog((l) => [item, ...l].slice(0, 50));
       const t = r.status === "scam" ? "error" : r.status === "suspicious" ? "warning" : "success";
-      toast[t](`${r.phoneNumber} — ${r.threatCategory} (trust ${r.trustScore}%)`);
+      toast[t](`${r.phoneNumber} — ${r.threatCategory} (trust ${r.trustScore}%) · ${r.source}`);
       qc.invalidateQueries({ queryKey: ["entity", "spam_calls"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+
   const smsMutation = useMutation({
     mutationFn: async (text: string) => {
-      await new Promise((r) => setTimeout(r, 600));
-      const result = analyzeSms(text);
+      // ── STEP 1: Check database first ────────────────────────────────────
+      const dbHit = await dbSmsLookup({ data: { text } });
+      if (dbHit.found) {
+        const res = dbSmsToAnalysis(dbHit);
+        try {
+          await logSearchCall({
+            data: {
+              module: "SMS",
+              input: text,
+              dbMatch: true,
+              aiUsed: false,
+              result: res.category,
+            },
+          });
+        } catch { /* best-effort */ }
+        return res;
+      }
+
+      // ── STEP 2: No DB match — run existing AI analysis ──────────────────
+      const api = await analyzeSms(text);
+      try {
+        await logSearchCall({
+          data: {
+            module: "SMS",
+            input: text,
+            dbMatch: false,
+            aiUsed: true,
+            result: api.category,
+          },
+        });
+      } catch { /* best-effort */ }
       try {
         await create({
           data: {
             entity: "scam_messages",
             values: {
-              channel: "sms", sender: "Unknown",
-              content: text.slice(0, 4000),
-              severity: statusToSeverity(result.status, result.trustScore),
+              channel: "sms",
+              content: text,
+              severity: statusToSeverity(api.status, api.trustScore),
             },
           },
         });
       } catch { /* best-effort */ }
-      return { result, text };
+      return api;
     },
-    onSuccess: ({ result, text }) => {
-      setSmsResult(result);
+    onSuccess: (r) => {
+      setSmsResult(r);
       const item: LogItem = {
-        id: crypto.randomUUID(), ts: result.checkedAt,
-        analysisType: "SMS Analysis", threatCategory: result.category,
-        target: text.slice(0, 60) + (text.length > 60 ? "…" : ""),
-        trustScore: result.trustScore, status: result.status,
-        country: "—", carrier: "—", confidence: result.confidence,
+        id: crypto.randomUUID(), ts: r.checkedAt,
+        analysisType: "SMS Analysis", threatCategory: r.category,
+        target: sms.length > 50 ? `${sms.slice(0, 50)}…` : sms,
+        trustScore: r.trustScore, status: r.status,
+        country: "N/A", carrier: "N/A", confidence: r.confidence,
+        sourceType: r.source === "Database Match" ? "DB" : "AI",
       };
       setLocalLog((l) => [item, ...l].slice(0, 50));
-      const t = result.status === "scam" ? "error" : result.status === "suspicious" ? "warning" : "success";
-      toast[t](`SMS — ${result.category} (trust ${result.trustScore}%)`);
+      const t = r.status === "scam" ? "error" : r.status === "suspicious" ? "warning" : "success";
+      toast[t](`SMS analyzed — category: ${r.category} (trust ${r.trustScore}%) · ${r.source}`);
       qc.invalidateQueries({ queryKey: ["entity", "scam_messages"] });
       qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Merge DB rows + local log
-  const dbLog: LogItem[] = [
-    ...((recentCalls.data?.rows ?? []) as Array<Record<string, unknown>>).map((r) => {
-      const sev = String(r.severity ?? "low");
-      const status = severityToStatus(sev);
-      const pattern = String(r.pattern ?? "");
-      const cat = pattern.split(" · ")[0] || (status === "legitimate" ? "Legitimate" : "Unknown");
-      return {
-        id: `c-${String(r.id)}`,
-        ts: String(r.reported_at ?? new Date().toISOString()),
-        analysisType: "Phone Number Analysis" as const,
-        threatCategory: cat,
-        target: String(r.phone_number ?? ""),
-        trustScore: severityToTrust(sev),
+  const callsList = recentCalls.data?.rows ?? [];
+  const msgsList  = recentMessages.data?.rows ?? [];
+
+  // Build client-side history timeline by merging state events with DB records
+  const log: LogItem[] = [...localLog];
+
+  callsList.forEach((c) => {
+    const { category, carrier, trustScore: patternTrust } = parsePattern(c.pattern);
+    const trust = patternTrust >= 0 ? patternTrust : severityToTrustDb(c.severity);
+    const status = severityToStatusDb(c.severity);
+    if (!log.some((l) => l.id === c.id || l.target === c.phone_number)) {
+      log.push({
+        id:             c.id,
+        ts:             c.reported_at ?? c.created_at ?? new Date().toISOString(),
+        analysisType:   "Phone Number Analysis",
+        threatCategory: category,
+        target:         c.phone_number,
+        trustScore:     trust,
         status,
-        country: String(r.country ?? "Unknown"),
-        carrier: pattern.split(" · ")[2] ?? "Unknown",
-        confidence: 80,
-      };
-    }),
-    ...((recentMessages.data?.rows ?? []) as Array<Record<string, unknown>>).map((r) => {
-      const sev = String(r.severity ?? "low");
-      const status = severityToStatus(sev);
-      return {
-        id: `m-${String(r.id)}`,
-        ts: String(r.detected_at ?? new Date().toISOString()),
-        analysisType: "SMS Analysis" as const,
-        threatCategory: status === "legitimate" ? "Legitimate" : status === "suspicious" ? "Spam" : "Fraud",
-        target: String(r.content ?? "").slice(0, 60),
-        trustScore: severityToTrust(sev),
+        country:        c.country ?? "Unknown",
+        carrier,
+        confidence:     100,
+        sourceType:     "DB",
+      });
+    }
+  });
+
+  msgsList.forEach((m) => {
+    const status = severityToStatusDb(m.severity);
+    if (!log.some((l) => l.id === m.id || l.target.startsWith(m.content.slice(0, 30)))) {
+      log.push({
+        id:             m.id,
+        ts:             m.detected_at ?? m.created_at ?? new Date().toISOString(),
+        analysisType:   "SMS Analysis",
+        threatCategory: "Scam Message",
+        target:         m.content,
+        trustScore:     severityToTrustDb(m.severity),
         status,
-        country: "—",
-        carrier: "—",
-        confidence: 80,
-      };
-    }),
-  ];
-  const log = [...localLog, ...dbLog]
-    .filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)
-    .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime())
-    .slice(0, 30);
+        country:        "N/A",
+        carrier:        "N/A",
+        confidence:     100,
+        sourceType:     "DB",
+      });
+    }
+  });
+
+  // Sort log by timestamp descending
+  log.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen pb-12">
       <div className="absolute inset-0 -z-10"><ParticlesBackground /></div>
 
-      <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-strong relative overflow-hidden rounded-2xl p-6 sm:p-8">
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#7B61FF] opacity-20 blur-3xl" />
-          <div className="absolute -bottom-16 -left-16 h-56 w-56 rounded-full bg-[#00D4FF] opacity-20 blur-3xl" />
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#00D4FF]/40 bg-[#00D4FF]/10 px-3 py-1 text-xs font-semibold text-[#00D4FF]">
-              <Radar className="h-3 w-3" /> Threat Intelligence Module
+      {/* Header Banner */}
+      <section className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
+        <div className="rounded-3xl bg-white border border-[#E4DEC6]/80 p-8 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#C48A5A]/15 ring-1 ring-[#C48A5A]/40">
+              <Radar className="h-6 w-6 text-[#C48A5A]" />
             </div>
-            <h1 className="mt-4 text-3xl font-bold text-white sm:text-4xl">
-              <span className="bg-gradient-to-r from-[#00D4FF] via-[#7B61FF] to-[#00FFA3] bg-clip-text text-transparent">
-                Phone Number Intelligence &amp; SMS Scam Detection
-              </span>
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Validate numbers against national numbering plans, resolve carrier &amp; line type, and detect SMS scams with explainable trust scoring.
-            </p>
+            <div>
+              <h1 className="text-2xl font-extrabold text-gray-800 font-poppins">Phone &amp; SMS Intelligence</h1>
+              <p className="text-sm font-medium text-gray-500 font-manrope mt-0.5">
+                Real-time validation against the numbering plan and scanning with explainable scam logic.
+              </p>
+            </div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       <section className="mx-auto mt-8 grid max-w-7xl grid-cols-1 gap-6 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         {/* PHONE ANALYZER */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00D4FF]/15 ring-1 ring-[#00D4FF]/40">
-              <Phone className="h-5 w-5 text-[#00D4FF]" />
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl bg-white border border-[#E4DEC6]/60 p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C48A5A]/10 border border-[#C48A5A]/25">
+              <Phone className="h-5 w-5 text-[#C48A5A]" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Phone Number Intelligence</h2>
-              <p className="text-xs text-muted-foreground">Validate &amp; reputation-check any phone number — country code optional.</p>
+              <h2 className="text-md font-bold text-gray-800 font-poppins">Phone Number Intelligence</h2>
+              <p className="text-[11px] font-medium text-gray-500 font-manrope">Validate &amp; reputation-check any phone number — country code optional.</p>
             </div>
           </div>
 
@@ -236,9 +405,9 @@ function IntelPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               maxLength={32}
-              className="bg-white/5"
+              className="bg-[#FAF8F5] border-[#E4DEC6] text-gray-800 rounded-xl"
             />
-            <Button type="submit" disabled={phoneMutation.isPending} className="bg-[#00D4FF] text-[#0A0F1F] hover:bg-[#00D4FF]/90">
+            <Button type="submit" disabled={phoneMutation.isPending} className="bg-[#C48A5A] text-white hover:bg-[#C48A5A]/90 rounded-xl">
               {phoneMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Analyze Number"}
             </Button>
           </form>
@@ -247,7 +416,7 @@ function IntelPage() {
             {phoneMutation.isPending && <ScanLoader key="pl" label="Querying numbering plan &amp; intelligence feeds…" />}
             {phoneResult && !phoneMutation.isPending && (
               <motion.div key="pr" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-4">
-                <TrustBanner score={phoneResult.trustScore} status={phoneResult.status} category={phoneResult.threatCategory} />
+                <TrustBanner score={phoneResult.trustScore} status={phoneResult.status} category={phoneResult.threatCategory} source={phoneResult.source} />
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <InfoCell icon={Phone} label="Phone Number" value={phoneResult.normalized || phoneResult.phoneNumber} />
                   <InfoCell icon={ShieldCheck} label="Valid Status" value={phoneResult.validStatus} />
@@ -268,14 +437,14 @@ function IntelPage() {
         </motion.div>
 
         {/* SMS ANALYZER */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.05 } }} className="glass rounded-2xl p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7B61FF]/15 ring-1 ring-[#7B61FF]/40">
-              <MessageSquare className="h-5 w-5 text-[#7B61FF]" />
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0, transition: { delay: 0.05 } }} className="rounded-3xl bg-white border border-[#E4DEC6]/60 p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4F7EF7]/10 border border-[#4F7EF7]/25">
+              <MessageSquare className="h-5 w-5 text-[#4F7EF7]" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">SMS Scam Detection</h2>
-              <p className="text-xs text-muted-foreground">Detects lottery, OTP, banking, phishing &amp; investment scams — typo-tolerant.</p>
+              <h2 className="text-md font-bold text-gray-800 font-poppins">SMS Scam Detection</h2>
+              <p className="text-[11px] font-medium text-gray-500 font-manrope">Detects lottery, OTP, banking, phishing &amp; investment scams — typo-tolerant.</p>
             </div>
           </div>
 
@@ -293,9 +462,9 @@ function IntelPage() {
               onChange={(e) => setSms(e.target.value)}
               maxLength={4000}
               rows={4}
-              className="resize-none bg-white/5"
+              className="resize-none bg-[#FAF8F5] border-[#E4DEC6] text-gray-800 rounded-xl"
             />
-            <Button type="submit" disabled={smsMutation.isPending} className="w-full bg-[#7B61FF] text-white hover:bg-[#7B61FF]/90">
+            <Button type="submit" disabled={smsMutation.isPending} className="w-full bg-[#4F7EF7] text-white hover:bg-[#4F7EF7]/90 rounded-xl">
               {smsMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Analyze SMS"}
             </Button>
           </form>
@@ -304,7 +473,7 @@ function IntelPage() {
             {smsMutation.isPending && <ScanLoader key="sl" label="Scanning content &amp; extracting indicators…" />}
             {smsResult && !smsMutation.isPending && (
               <motion.div key="sr" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 space-y-4">
-                <TrustBanner score={smsResult.trustScore} status={smsResult.status} category={smsResult.category} />
+                <TrustBanner score={smsResult.trustScore} status={smsResult.status} category={smsResult.category} source={smsResult.source} />
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <InfoCell icon={AlertTriangle} label="Threat Level" value={smsResult.threatLevel} />
                   <InfoCell icon={ShieldAlert} label="Threat Category" value={smsResult.category} />
@@ -313,10 +482,10 @@ function IntelPage() {
                 </div>
                 {smsResult.urls.length > 0 && (
                   <div>
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Extracted URLs</div>
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-manrope">Extracted URLs</div>
                     <div className="space-y-1">
                       {smsResult.urls.map((u, i) => (
-                        <div key={i} className="flex items-center gap-2 rounded-md border border-[#FF4D4D]/30 bg-[#FF4D4D]/[0.06] px-3 py-1.5 text-xs text-[#FF8080]">
+                        <div key={i} className="flex items-center gap-2 rounded-xl border border-[#E05A52]/20 bg-[#E05A52]/[0.04] px-3 py-1.5 text-xs text-[#E05A52]">
                           <Link2 className="h-3 w-3 shrink-0" />
                           <span className="truncate">{u}</span>
                         </div>
@@ -334,54 +503,67 @@ function IntelPage() {
 
       {/* THREAT INTELLIGENCE LOG */}
       <section className="mx-auto mt-10 max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
-        <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass rounded-2xl p-6">
+        <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-3xl bg-white border border-[#E4DEC6]/60 p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-[#00FFA3]" />
-              <h2 className="text-lg font-semibold text-white">Threat Intelligence Log</h2>
+              <Activity className="h-5 w-5 text-[#34A853]" />
+              <h2 className="text-md font-bold text-gray-800 font-poppins">Threat Intelligence Log</h2>
             </div>
-            <span className="text-xs text-muted-foreground">Live · {log.length} events</span>
+            <span className="text-xs text-gray-400 font-medium font-manrope font-semibold">Live · {log.length} events</span>
           </div>
           {log.length === 0 ? (
-            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-xl border border-[#E4DEC6] bg-[#FAF8F5] p-8 text-center text-xs font-semibold text-gray-500 font-manrope">
               No events yet. Run an analysis above to populate the log.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Analysis Type</TableHead>
-                    <TableHead>Threat Category</TableHead>
-                    <TableHead>Phone / SMS</TableHead>
-                    <TableHead>Trust</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Country</TableHead>
-                    <TableHead>Carrier</TableHead>
-                    <TableHead>Confidence</TableHead>
+                  <TableRow className="border-b border-[#E4DEC6]/60">
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Timestamp</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Analysis Type</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Threat Category</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Phone / SMS</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Trust</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Status</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Country</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Carrier</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Confidence</TableHead>
+                    <TableHead className="text-xs font-bold text-gray-400 font-manrope uppercase">Source</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {log.map((row) => {
                     const s = statusStyles[row.status];
                     return (
-                      <TableRow key={row.id}>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{new Date(row.ts).toLocaleString()}</TableCell>
-                        <TableCell className="text-xs text-white/80">{row.analysisType}</TableCell>
-                        <TableCell className="text-xs text-white/90">{row.threatCategory}</TableCell>
-                        <TableCell className="max-w-[260px] truncate text-sm text-white/80">{row.target}</TableCell>
+                      <TableRow key={row.id} className="border-b border-[#E4DEC6]/40 hover:bg-[#FAF8F5]/30">
+                        <TableCell className="whitespace-nowrap text-xs text-gray-500 font-manrope">{new Date(row.ts).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs text-gray-700 font-medium font-poppins">{row.analysisType}</TableCell>
+                        <TableCell className="text-xs text-gray-800 font-semibold font-manrope">{row.threatCategory}</TableCell>
+                        <TableCell className="max-w-[260px] truncate text-xs font-semibold text-gray-700 font-manrope">{row.target}</TableCell>
                         <TableCell>
-                          <span className="font-mono text-sm font-semibold" style={{ color: s.color }}>{row.trustScore}%</span>
+                          <span className="font-mono text-xs font-bold" style={{ color: s.color }}>{row.trustScore}%</span>
                         </TableCell>
                         <TableCell>
-                          <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+                          <span className="rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider" style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
                             {s.label}
                           </span>
                         </TableCell>
-                        <TableCell className="text-xs text-white/70">{row.country}</TableCell>
-                        <TableCell className="text-xs text-white/70">{row.carrier}</TableCell>
-                        <TableCell className="text-xs text-white/70">{row.confidence}%</TableCell>
+                        <TableCell className="text-xs text-gray-600 font-medium font-manrope">{row.country}</TableCell>
+                        <TableCell className="text-xs text-gray-600 font-medium font-manrope">{row.carrier}</TableCell>
+                        <TableCell className="text-xs text-gray-600 font-medium font-manrope">{row.confidence}%</TableCell>
+                        <TableCell>
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                            style={row.sourceType === "DB"
+                              ? { background: "rgba(52,168,83,0.06)", color: "#34A853", border: "1px solid rgba(52,168,83,0.15)" }
+                              : { background: "rgba(79,126,247,0.06)", color: "#4F7EF7", border: "1px solid rgba(79,126,247,0.15)" }
+                            }
+                          >
+                            {row.sourceType === "DB" ? <Database className="h-2.5 w-2.5" /> : <Cpu className="h-2.5 w-2.5" />}
+                            {row.sourceType === "DB" ? "DB" : "AI"}
+                          </span>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -395,58 +577,75 @@ function IntelPage() {
   );
 }
 
-function TrustBanner({ score, status, category }: { score: number; status: TrustStatus; category: string }) {
+function TrustBanner({ score, status, category, source }: { score: number; status: TrustStatus; category: string; source?: "Database Match" | "AI Analysis" }) {
   const s = statusStyles[status];
   const Icon = s.icon;
+  const displayLabel = category === "Invalid Number" ? "Unverifiable" : s.label;
+  const isDb = source === "Database Match";
   return (
-    <div className="relative overflow-hidden rounded-xl p-4" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
+    <div className="relative overflow-hidden rounded-2xl p-4.5" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Icon className="h-6 w-6" style={{ color: s.color }} />
           <div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Status · {category}</div>
-            <div className="text-lg font-bold" style={{ color: s.color }}>{s.label}</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-manrope">Status · {category}</div>
+            <div className="text-md font-extrabold font-poppins" style={{ color: s.color }}>{displayLabel}</div>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Trust Score</div>
-          <div className="text-3xl font-bold tabular-nums" style={{ color: s.color }}>{score}%</div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-manrope">Trust Score</div>
+          <div className="text-2xl font-extrabold tabular-nums font-poppins" style={{ color: s.color }}>{score}%</div>
         </div>
       </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/5">
-        <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 0.8, ease: "easeOut" }} className="h-full rounded-full" style={{ background: s.color, boxShadow: `0 0 10px ${s.color}99` }} />
+      <div className="mt-3.5 h-2 overflow-hidden rounded-full bg-gray-200">
+        <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 0.8, ease: "easeOut" }} className="h-full rounded-full" style={{ background: s.color }} />
       </div>
+      {source && (
+        <div className="mt-2.5 flex justify-end">
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider font-poppins"
+            style={isDb
+              ? { background: "rgba(52,168,83,0.06)", color: "#34A853", border: "1px solid rgba(52,168,83,0.15)" }
+              : { background: "rgba(79,126,247,0.06)", color: "#4F7EF7", border: "1px solid rgba(79,126,247,0.15)" }
+            }
+          >
+            {isDb ? <Database className="h-2.5 w-2.5" /> : <Cpu className="h-2.5 w-2.5" />}
+            {source}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
+
 function InfoCell({ icon: Icon, label, value }: { icon: typeof Phone; label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-        <Icon className="h-3 w-3" /> {label}
+    <div className="rounded-2xl border border-[#E4DEC6]/40 bg-[#FAF8F5] p-3.5 shadow-sm">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-manrope">
+        <Icon className="h-3.5 w-3.5" /> {label}
       </div>
-      <div className="mt-1 truncate text-sm font-medium text-white">{value}</div>
+      <div className="mt-1.5 truncate text-xs font-bold text-gray-700 font-poppins">{value}</div>
     </div>
   );
 }
 
 function Explanation({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-[#00D4FF]/20 bg-[#00D4FF]/[0.04] p-3 text-xs leading-relaxed text-white/85">
-      <span className="font-semibold text-[#00D4FF]">Analyst summary: </span>{text}
+    <div className="rounded-2xl border border-[#C48A5A]/20 bg-[#C48A5A]/[0.04] p-4 text-xs leading-relaxed text-gray-600 font-manrope shadow-sm">
+      <span className="font-bold text-[#C48A5A] font-poppins">Analyst summary: </span>{text}
     </div>
   );
 }
 
 function ReasonList({ reasons }: { reasons: string[] }) {
   return (
-    <div>
-      <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Evidence &amp; indicators</div>
-      <ul className="space-y-1">
+    <div className="rounded-2xl border border-[#E4DEC6]/40 bg-[#FAF8F5] p-4 shadow-sm">
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 font-manrope">Evidence &amp; indicators</div>
+      <ul className="space-y-1.5">
         {reasons.map((r, i) => (
-          <li key={i} className="flex items-start gap-2 text-xs text-white/80">
-            <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-[#00D4FF]" /> {r}
+          <li key={i} className="flex items-start gap-2.5 text-xs text-gray-600 font-manrope leading-relaxed">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#C48A5A]" /> {r}
           </li>
         ))}
       </ul>
@@ -456,12 +655,12 @@ function ReasonList({ reasons }: { reasons: string[] }) {
 
 function ScanLoader({ label }: { label: string }) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-5 rounded-xl border border-[#00D4FF]/30 bg-[#00D4FF]/[0.05] p-4">
-      <div className="flex items-center gap-3 text-sm text-[#00D4FF]">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-5 rounded-2xl border border-[#C48A5A]/20 bg-[#C48A5A]/[0.03] p-4">
+      <div className="flex items-center gap-3 text-xs font-bold text-[#C48A5A] font-poppins">
         <Loader2 className="h-4 w-4 animate-spin" /> {label}
       </div>
-      <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/5">
-        <motion.div animate={{ x: ["-100%", "100%"] }} transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }} className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent" />
+      <div className="mt-3.5 h-1 overflow-hidden rounded-full bg-gray-200">
+        <motion.div animate={{ x: ["-100%", "100%"] }} transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }} className="h-full w-1/3 rounded-full bg-gradient-to-r from-transparent via-[#C48A5A] to-transparent" />
       </div>
     </motion.div>
   );

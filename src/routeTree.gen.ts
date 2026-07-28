@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ThreatsRouteImport } from './routes/threats'
 import { Route as SpamCallsRouteImport } from './routes/spam-calls'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScamMessagesRouteImport } from './routes/scam-messages'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PhishingUrlsRouteImport } from './routes/phishing-urls'
 import { Route as MaliciousIpsRouteImport } from './routes/malicious-ips'
 import { Route as EmailScamsRouteImport } from './routes/email-scams'
@@ -34,9 +36,19 @@ const SpamCallsRoute = SpamCallsRouteImport.update({
   path: '/spam-calls',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScamMessagesRoute = ScamMessagesRouteImport.update({
   id: '/scam-messages',
   path: '/scam-messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PhishingUrlsRoute = PhishingUrlsRouteImport.update({
@@ -104,7 +116,9 @@ export interface FileRoutesByFullPath {
   '/email-scams': typeof EmailScamsRoute
   '/malicious-ips': typeof MaliciousIpsRoute
   '/phishing-urls': typeof PhishingUrlsRoute
+  '/reports': typeof ReportsRoute
   '/scam-messages': typeof ScamMessagesRoute
+  '/settings': typeof SettingsRoute
   '/spam-calls': typeof SpamCallsRoute
   '/threats': typeof ThreatsRoute
   '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
@@ -120,7 +134,9 @@ export interface FileRoutesByTo {
   '/email-scams': typeof EmailScamsRoute
   '/malicious-ips': typeof MaliciousIpsRoute
   '/phishing-urls': typeof PhishingUrlsRoute
+  '/reports': typeof ReportsRoute
   '/scam-messages': typeof ScamMessagesRoute
+  '/settings': typeof SettingsRoute
   '/spam-calls': typeof SpamCallsRoute
   '/threats': typeof ThreatsRoute
   '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
@@ -137,7 +153,9 @@ export interface FileRoutesById {
   '/email-scams': typeof EmailScamsRoute
   '/malicious-ips': typeof MaliciousIpsRoute
   '/phishing-urls': typeof PhishingUrlsRoute
+  '/reports': typeof ReportsRoute
   '/scam-messages': typeof ScamMessagesRoute
+  '/settings': typeof SettingsRoute
   '/spam-calls': typeof SpamCallsRoute
   '/threats': typeof ThreatsRoute
   '/api/v1/$entity': typeof ApiV1EntityRouteWithChildren
@@ -155,7 +173,9 @@ export interface FileRouteTypes {
     | '/email-scams'
     | '/malicious-ips'
     | '/phishing-urls'
+    | '/reports'
     | '/scam-messages'
+    | '/settings'
     | '/spam-calls'
     | '/threats'
     | '/api/v1/$entity'
@@ -171,7 +191,9 @@ export interface FileRouteTypes {
     | '/email-scams'
     | '/malicious-ips'
     | '/phishing-urls'
+    | '/reports'
     | '/scam-messages'
+    | '/settings'
     | '/spam-calls'
     | '/threats'
     | '/api/v1/$entity'
@@ -187,7 +209,9 @@ export interface FileRouteTypes {
     | '/email-scams'
     | '/malicious-ips'
     | '/phishing-urls'
+    | '/reports'
     | '/scam-messages'
+    | '/settings'
     | '/spam-calls'
     | '/threats'
     | '/api/v1/$entity'
@@ -204,7 +228,9 @@ export interface RootRouteChildren {
   EmailScamsRoute: typeof EmailScamsRoute
   MaliciousIpsRoute: typeof MaliciousIpsRoute
   PhishingUrlsRoute: typeof PhishingUrlsRoute
+  ReportsRoute: typeof ReportsRoute
   ScamMessagesRoute: typeof ScamMessagesRoute
+  SettingsRoute: typeof SettingsRoute
   SpamCallsRoute: typeof SpamCallsRoute
   ThreatsRoute: typeof ThreatsRoute
   ApiV1EntityRoute: typeof ApiV1EntityRouteWithChildren
@@ -228,11 +254,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SpamCallsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scam-messages': {
       id: '/scam-messages'
       path: '/scam-messages'
       fullPath: '/scam-messages'
       preLoaderRoute: typeof ScamMessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/phishing-urls': {
@@ -335,7 +375,9 @@ const rootRouteChildren: RootRouteChildren = {
   EmailScamsRoute: EmailScamsRoute,
   MaliciousIpsRoute: MaliciousIpsRoute,
   PhishingUrlsRoute: PhishingUrlsRoute,
+  ReportsRoute: ReportsRoute,
   ScamMessagesRoute: ScamMessagesRoute,
+  SettingsRoute: SettingsRoute,
   SpamCallsRoute: SpamCallsRoute,
   ThreatsRoute: ThreatsRoute,
   ApiV1EntityRoute: ApiV1EntityRouteWithChildren,
