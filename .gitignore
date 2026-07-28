@@ -45,3 +45,5 @@ catboost_info/
 
 # Environment files
 .env
+# ML datasets
+ML/data/
