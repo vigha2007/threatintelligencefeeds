@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 
 type Row = Record<string, string>;
 
+const JAVA_BASE = process.env.JAVA_BASE_URL || "http://localhost:8081";
+
 function dayKey(d: Date) {
   return d.toISOString().slice(0, 10);
 }
@@ -22,7 +24,7 @@ function relTime(d: Date, now: Date) {
 
 async function fetchRows(name: string, limit = 200): Promise<Row[]> {
   try {
-    const res = await fetch(`http://localhost:8081/api/v1/entity/${name}?limit=${limit}&offset=0`);
+    const res = await fetch(`${JAVA_BASE}/api/v1/entity/${name}?limit=${limit}&offset=0`);
     if (!res.ok) return [];
     const data = await res.json();
     return (data.rows ?? []) as Row[];
@@ -49,7 +51,7 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
       critical_count: 0, high_count: 0, medium_count: 0, low_count: 0,
     };
     try {
-      const res = await fetch("http://localhost:8081/api/v1/dashboard/metrics");
+      const res = await fetch(`${JAVA_BASE}/api/v1/dashboard/metrics`);
       if (res.ok) {
         const d = await res.json();
         javaCounts = {

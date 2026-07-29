@@ -5,6 +5,7 @@ import { entities, allEntityKeys, type EntityKey } from "@/lib/threat-entities";
 
 const entityParam = z.enum(allEntityKeys as [EntityKey, ...EntityKey[]]);
 const idParam = z.union([z.string(), z.number()]);
+const JAVA_BASE = process.env.JAVA_BASE_URL || "http://localhost:8081";
 
 export const Route = createFileRoute("/api/v1/$entity/$id")({
   server: {
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
         const id = idParam.safeParse(params.id);
         if (!e.success || !id.success) return jsonError(400, "Bad parameters");
         try {
-          const res = await fetch(`http://localhost:8081/api/v1/entity/${e.data}/${id.data}`);
+          const res = await fetch(`${JAVA_BASE}/api/v1/entity/${e.data}/${id.data}`);
           if (!res.ok) {
              if (res.status === 404) return jsonError(404, "Not found");
              throw new Error("Failed to fetch entity");
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
         const id = idParam.safeParse(params.id);
         if (!e.success || !id.success) return jsonError(400, "Bad parameters");
         try {
-          const res = await fetch(`http://localhost:8081/api/v1/entity/${e.data}/${id.data}`, {
+          const res = await fetch(`${JAVA_BASE}/api/v1/entity/${e.data}/${id.data}`, {
             method: 'DELETE'
           });
           if (!res.ok) throw new Error("Failed to delete entity");
@@ -50,7 +51,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
         if (!values.success) return jsonError(400, values.error.message);
         
         try {
-          const res = await fetch(`http://localhost:8081/api/v1/entity/${e.data}/${id.data}`, {
+          const res = await fetch(`${JAVA_BASE}/api/v1/entity/${e.data}/${id.data}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(values.data)

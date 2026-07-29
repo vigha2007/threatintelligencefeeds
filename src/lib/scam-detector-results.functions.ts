@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { severityEnum } from "./threat-entities";
 
+const JAVA_BASE = process.env.JAVA_BASE_URL || "http://localhost:8081";
+
 const inputSchema = z.object({
   input_text: z.string().min(1).max(8000),
   classification: z.string().min(1).max(128),
@@ -15,7 +17,7 @@ export const saveScamDetectorResult = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     // Save to Java backend
     try {
-      const res = await fetch(`http://localhost:8081/api/v1/entity/scam_detector_results`, {
+      const res = await fetch(`${JAVA_BASE}/api/v1/entity/scam_detector_results`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -33,7 +35,7 @@ export const saveScamDetectorResult = createServerFn({ method: "POST" })
 export const listScamDetectorResults = createServerFn({ method: "GET" })
   .handler(async () => {
     try {
-      const res = await fetch(`http://localhost:8081/api/v1/entity/scam_detector_results`);
+      const res = await fetch(`${JAVA_BASE}/api/v1/entity/scam_detector_results`);
       if (!res.ok) return { rows: [] };
       const json = await res.json();
       return { rows: json.rows ?? [] };

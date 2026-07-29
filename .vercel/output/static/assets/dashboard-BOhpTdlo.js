@@ -1,0 +1,1 @@
+import{j as t}from"./index-CReUj_4x.js";const r=({error:e})=>t.jsxs("div",{className:"p-12 text-center text-muted-foreground",children:["Failed to load metrics: ",e.message]});export{r as errorComponent};

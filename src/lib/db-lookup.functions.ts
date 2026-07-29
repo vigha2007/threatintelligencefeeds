@@ -13,18 +13,20 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import * as fs from "fs";
-import * as path from "path";
 
-const JAVA_BASE = "http://localhost:8081";
+const JAVA_BASE = process.env.JAVA_BASE_URL || "http://localhost:8081";
 
-export function logSearchActivity(
+export async function logSearchActivity(
   module: "Phone" | "SMS",
   input: string,
   dbMatch: boolean,
   aiUsed: boolean,
   result: string
 ) {
+  if (typeof window !== "undefined") return;
+  const fs = await import("fs");
+  const path = await import("path");
+
   const timestamp = new Date().toISOString();
   const logDir = path.join(process.cwd(), "logs");
   if (!fs.existsSync(logDir)) {
@@ -53,7 +55,7 @@ export const logSearch = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data }) => {
-    logSearchActivity(data.module, data.input, data.dbMatch, data.aiUsed, data.result);
+    await logSearchActivity(data.module, data.input, data.dbMatch, data.aiUsed, data.result);
     return { ok: true };
   });
 
