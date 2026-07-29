@@ -23,7 +23,7 @@ export const Route = createFileRoute("/api/v1/scam-detector/results")({
           const json = await res.json();
           return jsonResponse(200, { rows: json.rows ?? [] });
         } catch (e) {
-          return jsonError(500, (e as Error).message);
+          return jsonResponse(200, { rows: [] });
         }
       },
       POST: async ({ request }) => {

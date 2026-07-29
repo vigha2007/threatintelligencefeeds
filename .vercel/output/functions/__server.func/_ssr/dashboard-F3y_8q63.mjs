@@ -1,5 +1,5 @@
 import { j as jsxRuntimeExports, r as reactExports } from "../_libs/react.mjs";
-import { u as useServerFn, g as getDashboardMetrics, m as metricsQuery } from "./router-TZtvNers.mjs";
+import { u as useServerFn, g as getDashboardMetrics, m as metricsQuery } from "./router-D42rnSKO.mjs";
 import { L as Link } from "../_libs/tanstack__react-router.mjs";
 import { c as useSuspenseQuery } from "../_libs/tanstack__react-query.mjs";
 import { P as ParticlesBackground } from "./particles-background-BTkR0O5l.mjs";
@@ -61,7 +61,7 @@ import "../_libs/get-nonce.mjs";
 import "../_libs/use-sidecar.mjs";
 import "../_libs/use-callback-ref.mjs";
 import "../_libs/radix-ui__react-dialog.mjs";
-import "./server-DkvSOJyR.mjs";
+import "./server-BRD1Kp-V.mjs";
 import "node:async_hooks";
 import "../_libs/h3-v2.mjs";
 import "../_libs/rou3.mjs";

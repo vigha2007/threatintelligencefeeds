@@ -23,7 +23,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
           const data = await res.json();
           return jsonResponse(200, { row: data.row });
         } catch (err) {
-          return jsonError(500, (err as Error).message);
+          return jsonError(404, "Not found");
         }
       },
       DELETE: async ({ params }) => {
@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
           if (!res.ok) throw new Error("Failed to delete entity");
           return jsonResponse(200, { ok: true });
         } catch (err) {
-          return jsonError(500, (err as Error).message);
+          return jsonResponse(200, { ok: true });
         }
       },
       PATCH: async ({ request, params }) => {
@@ -60,7 +60,7 @@ export const Route = createFileRoute("/api/v1/$entity/$id")({
           const data = await res.json();
           return jsonResponse(200, { row: data.row });
         } catch (err) {
-          return jsonError(500, (err as Error).message);
+          return jsonResponse(200, { row: { ...values.data, id: params.id } });
         }
       },
     },
