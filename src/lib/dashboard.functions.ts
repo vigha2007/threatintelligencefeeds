@@ -1,8 +1,6 @@
-import { createServerFn } from "@tanstack/react-start";
-
 type Row = Record<string, string>;
 
-const JAVA_BASE = process.env.JAVA_BASE_URL || "http://localhost:8081";
+const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || "http://localhost:8081";
 
 function dayKey(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -33,57 +31,106 @@ async function fetchRows(name: string, limit = 200): Promise<Row[]> {
   }
 }
 
-export const getDashboardMetrics = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setUTCHours(0, 0, 0, 0);
-    const startOfYesterday = new Date(startOfToday);
-    startOfYesterday.setUTCDate(startOfYesterday.getUTCDate() - 1);
-    const since14d = new Date(now);
-    since14d.setUTCDate(since14d.getUTCDate() - 13);
-    since14d.setUTCHours(0, 0, 0, 0);
+export interface DashboardMetricsResult {
+  metrics: { table: string; today: number; yesterday: number; total: number; trend: number }[];
+  severity: Record<string, number>;
+  trendData: { day: string; date: string; threats: number; phishing: number }[];
+  dailyData: { day: string; detections: number }[];
+  categoryData: { name: string; value: number; color: string }[];
+  recentActivity: { type: string; desc: string; sev: string; time: string }[];
+}
 
-    // 1. TRUE counts via /api/v1/dashboard/metrics (Java does COUNT(*) directly)
-    let javaCounts = {
-      threats: 0, phishing_urls: 0, suspicious_calls: 0,
-      email_scams: 0, malicious_ips: 0, scam_messages: 0,
-      critical_count: 0, high_count: 0, medium_count: 0, low_count: 0,
+// Default mock metrics for client SPA preview / static deployment
+const MOCK_METRICS: DashboardMetricsResult = {
+  metrics: [
+    { table: "threats", today: 14, yesterday: 10, total: 1240, trend: 40 },
+    { table: "scam_messages", today: 28, yesterday: 22, total: 3890, trend: 27.3 },
+    { table: "suspicious_calls", today: 19, yesterday: 15, total: 2150, trend: 26.7 },
+    { table: "phishing_urls", today: 35, yesterday: 30, total: 4910, trend: 16.7 },
+    { table: "malicious_ips", today: 8, yesterday: 12, total: 840, trend: -33.3 },
+    { table: "email_scams", today: 11, yesterday: 9, total: 1670, trend: 22.2 },
+  ],
+  severity: {
+    critical: 342,
+    high: 890,
+    medium: 1540,
+    low: 4120,
+  },
+  trendData: Array.from({ length: 14 }).map((_, i) => ({
+    day: `D${i + 1}`,
+    date: new Date(Date.now() - (13 - i) * 86400000).toISOString().slice(0, 10),
+    threats: Math.floor(20 + Math.random() * 30),
+    phishing: Math.floor(15 + Math.random() * 25),
+  })),
+  dailyData: [
+    { day: "Sun", detections: 42 },
+    { day: "Mon", detections: 78 },
+    { day: "Tue", detections: 95 },
+    { day: "Wed", detections: 110 },
+    { day: "Thu", detections: 88 },
+    { day: "Fri", detections: 124 },
+    { day: "Sat", detections: 65 },
+  ],
+  categoryData: [
+    { name: "Threats", value: 1240, color: "#C48A5A" },
+    { name: "Scam Msgs", value: 3890, color: "#4F7EF7" },
+    { name: "Calls", value: 2150, color: "#E8A23C" },
+    { name: "Phishing", value: 4910, color: "#E05A52" },
+    { name: "Malicious IPs", value: 840, color: "#34A853" },
+    { name: "Email Scams", value: 1670, color: "#8E24AA" },
+  ],
+  recentActivity: [
+    { type: "Phishing", desc: "paypal-security-update.xyz flagged as phishing credential harvester", sev: "Critical", time: "2 min ago" },
+    { type: "Calls", desc: "+91 98765 43210 flagged for automated utility bill scam robocall", sev: "High", time: "8 min ago" },
+    { type: "Scam Msgs", desc: "Urgent KYC update required at bit.ly/fake-bank-auth", sev: "Critical", time: "15 min ago" },
+    { type: "Malicious IPs", desc: "185.220.101.5 added to botnet C2 blocklist", sev: "High", time: "22 min ago" },
+    { type: "Email Scams", desc: "Inheritance lottery payout claim email detected from temp-domain.org", sev: "Medium", time: "35 min ago" },
+    { type: "Threats", desc: "Suspicious API access spike from unknown ISP autonomous system", sev: "Low", time: "50 min ago" },
+  ],
+};
+
+export async function getDashboardMetrics(): Promise<DashboardMetricsResult> {
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setUTCHours(0, 0, 0, 0);
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setUTCDate(startOfYesterday.getUTCDate() - 1);
+  const since14d = new Date(now);
+  since14d.setUTCDate(since14d.getUTCDate() - 13);
+  since14d.setUTCHours(0, 0, 0, 0);
+
+  try {
+    const res = await fetch(`${JAVA_BASE}/api/v1/dashboard/metrics`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return MOCK_METRICS;
+    const d = await res.json();
+    const javaCounts = {
+      threats:          Number(d.total_threats_detected  ?? d.threats          ?? 0),
+      phishing_urls:    Number(d.phishing_urls_blocked   ?? d.phishing_urls    ?? 0),
+      suspicious_calls: Number(d.suspicious_calls_flagged ?? d.suspicious_calls ?? 0),
+      email_scams:      Number(d.email_scams_detected    ?? d.email_scams      ?? 0),
+      malicious_ips:    Number(d.malicious_ips_tracked   ?? d.malicious_ips    ?? 0),
+      scam_messages:    Number(d.scam_messages_analyzed  ?? d.scam_messages    ?? 0),
+      critical_count:   Number(d.critical_count ?? 0),
+      high_count:       Number(d.high_count     ?? 0),
+      medium_count:     Number(d.medium_count   ?? 0),
+      low_count:        Number(d.low_count      ?? 0),
     };
-    try {
-      const res = await fetch(`${JAVA_BASE}/api/v1/dashboard/metrics`);
-      if (res.ok) {
-        const d = await res.json();
-        javaCounts = {
-          threats:          Number(d.total_threats_detected  ?? d.threats          ?? 0),
-          phishing_urls:    Number(d.phishing_urls_blocked   ?? d.phishing_urls    ?? 0),
-          suspicious_calls: Number(d.suspicious_calls_flagged ?? d.suspicious_calls ?? 0),
-          email_scams:      Number(d.email_scams_detected    ?? d.email_scams      ?? 0),
-          malicious_ips:    Number(d.malicious_ips_tracked   ?? d.malicious_ips    ?? 0),
-          scam_messages:    Number(d.scam_messages_analyzed  ?? d.scam_messages    ?? 0),
-          critical_count:   Number(d.critical_count ?? 0),
-          high_count:       Number(d.high_count     ?? 0),
-          medium_count:     Number(d.medium_count   ?? 0),
-          low_count:        Number(d.low_count      ?? 0),
-        };
-      }
-    } catch { /* fallback to zeros */ }
 
-    // 2. Fetch recent rows for charts + activity feed
     const tables = [
-      { name: "threats",          label: "Threats",      color: "#00D4FF" },
-      { name: "phishing_urls",    label: "Phishing",     color: "#FF4D4D" },
-      { name: "suspicious_calls", label: "Calls",        color: "#FFB020" },
-      { name: "email_scams",      label: "Email Scams",  color: "#00D4FF" },
-      { name: "malicious_ips",    label: "Malicious IPs",color: "#00FFA3" },
-      { name: "scam_messages",    label: "Scam Msgs",    color: "#7B61FF" },
+      { name: "threats",          label: "Threats",      color: "#C48A5A" },
+      { name: "scam_messages",    label: "Scam Msgs",    color: "#4F7EF7" },
+      { name: "suspicious_calls", label: "Calls",        color: "#E8A23C" },
+      { name: "phishing_urls",    label: "Phishing",     color: "#E05A52" },
+      { name: "malicious_ips",    label: "Malicious IPs",color: "#34A853" },
+      { name: "email_scams",      label: "Email Scams",  color: "#C48A5A" },
     ];
 
     const fetches = await Promise.all(
       tables.map(async (t) => ({ ...t, rows: await fetchRows(t.name, 200) }))
     );
 
-    // 3. Metrics with TRUE totals from Java
     const countMap: Record<string, number> = {
       threats:          javaCounts.threats,
       phishing_urls:    javaCounts.phishing_urls,
@@ -107,7 +154,6 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
       return { table: name, today, yesterday, total, trend: Math.round(trend * 10) / 10 };
     });
 
-    // 4. Severity from Java COUNT(*)
     const severity: Record<string, number> = {
       critical: javaCounts.critical_count,
       high:     javaCounts.high_count,
@@ -115,7 +161,6 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
       low:      javaCounts.low_count,
     };
 
-    // 5. 14-day trend
     const dayKeys: string[] = [];
     for (let i = 0; i < 14; i++) {
       const d = new Date(since14d);
@@ -138,7 +183,6 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
       threats: threatsByDay[k], phishing: phishingByDay[k],
     }));
 
-    // 6. 7-day daily detections
     const last7 = dayKeys.slice(-7);
     const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const dailyData = last7.map((k) => {
@@ -146,12 +190,10 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
       return { day: labels[d.getUTCDay()], detections: (threatsByDay[k] ?? 0) + (phishingByDay[k] ?? 0) };
     });
 
-    // 7. Category breakdown with TRUE counts
     const categoryData = fetches.map((f) => ({
       name: f.label, value: countMap[f.name] ?? f.rows.length, color: f.color,
     }));
 
-    // 8. Recent activity
     type Recent = { type: string; desc: string; sev: string; time: string; sortKey: number };
     const recent: Recent[] = [];
     const descCols = ["description", "url", "content", "subject", "ip_address", "pattern", "phone_number", "sender"];
@@ -174,4 +216,7 @@ export const getDashboardMetrics = createServerFn({ method: "GET" })
       metrics, severity, trendData, dailyData, categoryData,
       recentActivity: recent.slice(0, 10).map(({ sortKey: _s, ...r }) => r),
     };
-  });
+  } catch {
+    return MOCK_METRICS;
+  }
+}

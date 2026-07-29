@@ -1,8 +1,7 @@
-import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { severityEnum } from "./threat-entities";
 
-const JAVA_BASE = process.env.JAVA_BASE_URL || "http://localhost:8081";
+const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || "http://localhost:8081";
 
 const inputSchema = z.object({
   input_text: z.string().min(1).max(8000),
@@ -12,34 +11,59 @@ const inputSchema = z.object({
   raw_response: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const saveScamDetectorResult = createServerFn({ method: "POST" })
-  .inputValidator((d) => inputSchema.parse(d))
-  .handler(async ({ data }) => {
-    // Save to Java backend
-    try {
-      const res = await fetch(`${JAVA_BASE}/api/v1/entity/scam_detector_results`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error("Failed to insert result in Java backend");
-      const json = await res.json();
-      return { row: json.row as Record<string, string | number | boolean | null> };
-    } catch {
-      // Mock if table doesn't exist — cast through unknown to satisfy the index signature
-      // since raw_response (Record<string, unknown>) isn't directly assignable to the return type
-      return { row: ({ ...data, id: Date.now() } as unknown) as Record<string, string | number | boolean | null> };
-    }
-  });
+type ScamResultRow = Record<string, string | number | boolean | null>;
 
-export const listScamDetectorResults = createServerFn({ method: "GET" })
-  .handler(async () => {
+const LOCAL_STORAGE_KEY = "threat_intel_scam_results";
+
+function getLocalScamResults(): ScamResultRow[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveScamDetectorResult(params: { data: z.infer<typeof inputSchema> }) {
+  const data = inputSchema.parse(params.data);
+  try {
+    const res = await fetch(`${JAVA_BASE}/api/v1/entity/scam_detector_results`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      return { row: json.row as ScamResultRow };
+    }
+  } catch {
+    /* fallback to local store */
+  }
+
+  const newRow: ScamResultRow = { ...data, id: Date.now() } as unknown as ScamResultRow;
+  const current = getLocalScamResults();
+  if (typeof window !== "undefined") {
     try {
-      const res = await fetch(`${JAVA_BASE}/api/v1/entity/scam_detector_results`);
-      if (!res.ok) return { rows: [] };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([newRow, ...current]));
+    } catch { /* ignore */ }
+  }
+  return { row: newRow };
+}
+
+export async function listScamDetectorResults() {
+  try {
+    const res = await fetch(`${JAVA_BASE}/api/v1/entity/scam_detector_results`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) {
       const json = await res.json();
       return { rows: json.rows ?? [] };
-    } catch {
-      return { rows: [] };
     }
-  });
+  } catch {
+    /* fallback to local store */
+  }
+
+  return { rows: getLocalScamResults() };
+}

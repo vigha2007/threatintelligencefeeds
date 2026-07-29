@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
   Shield, MessageSquare, Phone, Link2, Globe, Mail,
@@ -140,8 +139,7 @@ function sevColor(s: string) {
 }
 
 function Dashboard() {
-  const fetcher = useServerFn(getDashboardMetrics);
-  const { data } = useSuspenseQuery({ ...metricsQuery(), queryFn: () => fetcher() });
+  const { data } = useSuspenseQuery(metricsQuery());
 
   const metricsByKey: Record<string, { total: number; trend: number; today: number; yesterday: number }> =
     Object.fromEntries(data.metrics.map((m) => [m.table, m]));

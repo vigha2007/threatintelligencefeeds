@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { Plus, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -28,9 +27,9 @@ const sevColors: Record<string, string> = {
 export function EntityManagementPage({ entity }: { entity: EntityKey }) {
   const def = entities[entity];
   const qc = useQueryClient();
-  const list   = useServerFn(listEntity);
-  const create = useServerFn(createEntity);
-  const del    = useServerFn(deleteEntity);
+  const list   = listEntity;
+  const create = createEntity;
+  const del    = deleteEntity;
 
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);

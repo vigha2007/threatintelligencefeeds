@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone, MessageSquare, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion,
@@ -150,12 +149,12 @@ function dbSmsToAnalysis(hit: DbSmsRecord): import("@/lib/intel-analyzers").SmsA
 
 function IntelPage() {
   const qc = useQueryClient();
-  const create = useServerFn(createEntity);
-  const list = useServerFn(listEntity);
-  const validatePhone = useServerFn(validatePhoneAbstract);
-  const dbPhoneLookup = useServerFn(lookupPhoneInDb);
-  const dbSmsLookup   = useServerFn(lookupSmsInDb);
-  const logSearchCall = useServerFn(logSearch);
+  const create = createEntity;
+  const list = listEntity;
+  const validatePhone = validatePhoneAbstract;
+  const dbPhoneLookup = lookupPhoneInDb;
+  const dbSmsLookup   = lookupSmsInDb;
+  const logSearchCall = logSearch;
 
 
   const [phone, setPhone] = useState("");
