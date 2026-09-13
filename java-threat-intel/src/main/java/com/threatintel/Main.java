@@ -33,6 +33,12 @@ public class Main {
 
         // Start the server
         int port = 8081;
+        String portEnv = System.getenv("PORT");
+        if (portEnv != null && !portEnv.trim().isEmpty()) {
+            try {
+                port = Integer.parseInt(portEnv.trim());
+            } catch (NumberFormatException ignored) {}
+        }
         AppServer server = new AppServer(port);
         server.start();
     }
