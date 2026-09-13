@@ -10,6 +10,7 @@ import com.threatintel.ThreatPrediction;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class DashboardMetricsHandler implements HttpHandler {
@@ -40,8 +41,8 @@ public class DashboardMetricsHandler implements HttpHandler {
         String method = exchange.getRequestMethod();
 
         try {
-            if (path.equals("/api/analyze") && "POST".equalsIgnoreCase(method)) {
-                handleAnalyze(exchange);
+            if ((path.equals("/api/analyze") || path.equals("/api/call-detect")) && "POST".equalsIgnoreCase(method)) {
+                handleAnalyze(exchange, path.equals("/api/call-detect"));
             } else if ("GET".equalsIgnoreCase(method)) {
                 handleMetrics(exchange);
             } else {
@@ -77,9 +78,9 @@ public class DashboardMetricsHandler implements HttpHandler {
         }
     }
 
-    // ── Handler: POST /api/analyze ────────────────────────────────────────────
+    // ── Handler: POST /api/analyze and /api/call-detect ───────────────────────
 
-    private void handleAnalyze(HttpExchange exchange) throws IOException {
+    private void handleAnalyze(HttpExchange exchange, boolean isCallDetect) throws IOException {
         // Read request body
         String body;
         try (InputStream is = exchange.getRequestBody()) {
@@ -90,13 +91,17 @@ public class DashboardMetricsHandler implements HttpHandler {
         @SuppressWarnings("unchecked")
         Map<String, String> request = gson.fromJson(body, Map.class);
 
-        String type    = request.getOrDefault("type",    "").trim();
-        String content = request.getOrDefault("content", "").trim();
+        // Support both { type, content } and { phone, content } payloads
+        String type    = request.getOrDefault("type",    isCallDetect ? "call" : "").trim();
+        String content = request.getOrDefault("content",
+                            request.getOrDefault("phone", "")).trim();
+
+        if (type.isEmpty()) type = isCallDetect ? "call" : "unknown";
 
         // Validate input
-        if (type.isEmpty() || content.isEmpty()) {
+        if (content.isEmpty()) {
             sendJson(exchange, 400, Map.of(
-                "error",       "Both 'type' and 'content' fields are required.",
+                "error",       "A 'content' or 'phone' field is required.",
                 "valid_types", "url | email | sms | call | ip"
             ));
             return;
@@ -106,24 +111,50 @@ public class DashboardMetricsHandler implements HttpHandler {
         ThreatPrediction result = DashboardService.analyzeAndStore(type, content);
 
         if (result != null) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("status",         "success");
-            response.put("prediction",     result.getPrediction());
-            response.put("confidence",     result.getConfidence());
-            response.put("threat_level",   result.getThreatLevel());
-            response.put("data_type",      result.getDataType());
-            response.put("is_malicious",   result.isMalicious());
-            response.put("confidence_pct",
-                String.format("%.1f%%", result.getConfidence() * 100));
+            boolean malicious  = result.isMalicious();
+            double  rawConf    = result.getConfidence(); // 0.0 – 1.0
+            double  confPct    = Math.round(rawConf * 1000.0) / 10.0; // e.g. 96.8
 
-            sendJson(exchange, 200, response);
+            String prediction  = malicious ? "SCAM" : "GOOD";
+            int    label       = malicious ? 1 : 0;
+            String threatType  = malicious ? "Fraud" : "Benign";
+            String phone       = request.getOrDefault("phone", content);
+            String country     = request.getOrDefault("country", "Unknown");
+            String timestamp   = java.time.Instant.now().toString();
+
+            if (isCallDetect) {
+                // Clean structured response for frontend Call Detection
+                Map<String, Object> resp = new LinkedHashMap<>();
+                resp.put("prediction",  prediction);
+                resp.put("label",       label);
+                resp.put("confidence",  confPct);
+                resp.put("threatType",  threatType);
+                resp.put("phone",       phone);
+                resp.put("country",     country);
+                resp.put("timestamp",   timestamp);
+                resp.put("threat_level", result.getThreatLevel());
+                resp.put("is_malicious", malicious);
+                sendJson(exchange, 200, resp);
+            } else {
+                // Legacy analyze response
+                Map<String, Object> resp = new HashMap<>();
+                resp.put("status",      "success");
+                resp.put("prediction",  prediction);
+                resp.put("confidence",  rawConf);
+                resp.put("threat_level", result.getThreatLevel());
+                resp.put("data_type",   result.getDataType());
+                resp.put("is_malicious", malicious);
+                resp.put("confidence_pct", String.format("%.1f%%", confPct));
+                sendJson(exchange, 200, resp);
+            }
         } else {
             sendJson(exchange, 503, Map.of(
                 "status",  "error",
-                "message", "ML analysis failed. Make sure Flask API is running on port 5000."
+                "message", "ML analysis failed. Make sure FastAPI ML server is running on port 8000."
             ));
         }
     }
+
 
     // ── Utility: write JSON response ──────────────────────────────────────────
 

@@ -4,6 +4,7 @@
 
 import Fuse from "fuse.js";
 import type { AbstractPhoneResult } from "./phone.functions";
+import { parseNumeric } from "./formatters";
 
 export type TrustStatus = "legitimate" | "suspicious" | "scam";
 export type NumberType = "Mobile" | "Landline" | "VoIP" | "Toll-Free" | "Unknown";
@@ -19,6 +20,232 @@ export type ThreatCategory =
   | "Banking Fraud"
   | "Invalid Number"
   | "Unknown";
+
+export interface CallDetectionResponse {
+  prediction: "SCAM" | "FRAUD" | "GOOD" | string;
+  rawPrediction: string;
+  classification?: string;
+  category?: string;
+  riskLevel?: string;
+  confidence: number | null;
+  phone: string;
+  normalizedPhoneNumber?: string;
+  callerIdentity?: string;
+  country: string;
+  carrier?: string;
+  lineType?: string;
+  reason: string;
+  timestamp: string;
+  source: string;
+  threatLevel?: string;
+  status?: string;
+  sources?: {
+    database?: { queried: boolean; matched: boolean; status?: string; severity?: string; pattern?: string; dbId?: number; phoneStored?: string; matchedCount?: number; conflictDetected?: boolean };
+    ml?: { queried: boolean; available: boolean; prediction?: string; confidence?: number; threatLevel?: string };
+    external?: { queried: boolean; available: boolean; valid?: boolean; active?: boolean; fraudScore?: number; risky?: boolean; recentAbuse?: boolean; spammer?: boolean; carrier?: string; lineType?: string };
+    ipqs?: { queried: boolean; available: boolean; valid?: boolean; active?: boolean; fraudScore?: number; risky?: boolean; recentAbuse?: boolean; spammer?: boolean; carrier?: string; lineType?: string };
+    truecaller?: { queried?: boolean; available?: boolean; name?: string; category?: string };
+    telecomEngine?: { analyzed?: boolean; formatValid?: boolean; country?: string; lineType?: string; carrier?: string };
+  };
+  evidence?: string[];
+  recommendation?: string;
+}
+
+export const ML_API_BASE = import.meta.env.VITE_ML_API_URL || import.meta.env.VITE_API_URL || "http://localhost:5000";
+export const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || "http://localhost:8081";
+
+export async function predictCallApi(phone: string, phoneInfo?: Partial<AbstractPhoneResult>): Promise<CallDetectionResponse> {
+  const timestamp = new Date().toISOString();
+  const country = phoneInfo?.country && phoneInfo.country !== "Unknown" ? phoneInfo.country : "Unknown";
+
+  let resJson: Record<string, unknown> | null = null;
+  let sourceUsed = "Multi-Source Threat Engine";
+
+  // ── 1. DB + ML + IPQS detection via Java backend /api/v1/detect/call ──
+  try {
+    const res = await fetch(`${JAVA_BASE}/api/v1/detect/call`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber: phone }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as Record<string, unknown>;
+      if (data.success || data.status || data.category) {
+        resJson = data;
+        sourceUsed = "Threat Intelligence Pipeline";
+      }
+    }
+  } catch { /* fallback to direct ML */ }
+
+  // ── 2. Try Flask ML API: POST /predict/call ────────────────────────────
+  if (!resJson) {
+    try {
+      const res = await fetch(`${ML_API_BASE}/predict/call`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: phone, phone }),
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        resJson = (await res.json()) as Record<string, unknown>;
+        sourceUsed = "ML Model API (/predict/call)";
+      }
+    } catch { /* fallback */ }
+  }
+
+  // ── 3. Try Flask ML API generic endpoint ──────────────────────────────
+  if (!resJson) {
+    try {
+      const res = await fetch(`${ML_API_BASE}/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "call", content: phone }),
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        resJson = (await res.json()) as Record<string, unknown>;
+        sourceUsed = "ML Model API (/predict)";
+      }
+    } catch { /* fallback */ }
+  }
+
+  // ── 4. Try Java backend legacy /api/call-detect ──────────────────────
+  if (!resJson) {
+    try {
+      const res = await fetch(`${JAVA_BASE}/api/call-detect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, content: phone, country }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as Record<string, unknown>;
+        if (!String(data.status ?? "").includes("error")) {
+          resJson = data;
+          sourceUsed = "Threat Intelligence Backend (/api/call-detect)";
+        }
+      }
+    } catch { /* fallback */ }
+  }
+
+  if (!resJson) {
+    throw new Error(
+      "Detection service error. The Java backend (/api/v1/detect/call) returned no result. " +
+      "Check that the Java backend is running on port 8081."
+    );
+  }
+
+  // ── Handle new multi-source response format ─────────────────────────
+  if (resJson.status || resJson.category || resJson.sources || resJson.evidence || resJson.classification) {
+    const rawClass = String(resJson.classification ?? resJson.status ?? resJson.verdict ?? "").toUpperCase();
+    const rawCat   = String(resJson.category ?? "").toUpperCase();
+
+    const isScam       = rawClass === "SCAM" || rawClass === "FRAUD" || rawClass === "MALICIOUS" || rawCat.includes("SCAM") || rawCat.includes("FRAUD");
+    const isSuspicious = rawClass === "SUSPICIOUS" || rawClass === "SPAM" || rawCat.includes("SUSPICIOUS") || rawCat.includes("SPAM") || rawCat.includes("REPETITIVE");
+    const isInvalid    = rawClass === "INVALID_NUMBER" || rawClass === "INVALID" || rawCat.includes("INVALID");
+    const isUnverified = rawClass === "UNVERIFIED" || rawClass === "UNKNOWN";
+
+    const finalPrediction: "SCAM" | "GOOD" = (isScam || isSuspicious) ? "SCAM" : "GOOD";
+
+    // Prefer top-level confidence; fall back to ml_confidence from sources when available
+    let confidence: number | null = null;
+    const rawConf = parseNumeric(resJson.confidence ?? resJson.ml_confidence);
+    if (rawConf !== null) {
+      confidence = rawConf <= 1.0 ? Math.round(rawConf * 1000) / 10 : Math.round(rawConf * 10) / 10;
+    }
+    // Also try nested sources.ml.confidence when top-level is absent
+    if (confidence === null && resJson.sources && typeof resJson.sources === "object") {
+      const mlSrc = (resJson.sources as Record<string, unknown>).ml;
+      if (mlSrc && typeof mlSrc === "object") {
+        const mlConfRaw = parseNumeric((mlSrc as Record<string, unknown>).confidence);
+        if (mlConfRaw !== null) {
+          confidence = mlConfRaw <= 1.0 ? Math.round(mlConfRaw * 1000) / 10 : Math.round(mlConfRaw * 10) / 10;
+        }
+      }
+    }
+
+    const riskLevelStr = String(
+      resJson.riskLevel ?? resJson.threatLevel ??
+      (isScam ? "CRITICAL" : isSuspicious ? "MEDIUM" : isInvalid ? "NONE" : isUnverified ? "UNKNOWN" : "LOW")
+    ).toUpperCase();
+    const detectedCountry = String(resJson.country ?? country);
+    const carrier = resJson.carrier ? String(resJson.carrier) : undefined;
+    const lineType = resJson.lineType ? String(resJson.lineType) : undefined;
+    const reason = String(resJson.message ?? resJson.recommendation ?? "Call threat analysis complete.");
+    const evidenceList = Array.isArray(resJson.evidence) ? (resJson.evidence as string[]) : [];
+    const recommendationStr = resJson.recommendation ? String(resJson.recommendation) : undefined;
+
+    return {
+      prediction: finalPrediction,
+      rawPrediction: rawClass || rawCat || "UNKNOWN",
+      category: String(resJson.category ?? rawClass ?? "Unknown Caller"),
+      status: rawClass || rawCat || "UNKNOWN",
+      riskLevel: riskLevelStr,
+      confidence,
+      phone: String(resJson.phoneNumber ?? phone),
+      normalizedPhoneNumber: resJson.normalizedPhoneNumber ? String(resJson.normalizedPhoneNumber) : undefined,
+      callerIdentity: resJson.callerIdentity ? String(resJson.callerIdentity) : undefined,
+      country: detectedCountry !== "Unknown" ? detectedCountry : country,
+      carrier,
+      lineType,
+      reason,
+      timestamp,
+      source: sourceUsed,
+      threatLevel: riskLevelStr,
+      sources: resJson.sources as CallDetectionResponse["sources"],
+      evidence: evidenceList,
+      recommendation: recommendationStr,
+    };
+  }
+
+
+  // ── Parse legacy prediction format ─────────────────────────────────
+  let finalPrediction: "SCAM" | "GOOD";
+  const rawPred = String(resJson.prediction ?? "").toUpperCase();
+  if (rawPred === "SCAM" || rawPred === "GOOD") {
+    finalPrediction = rawPred;
+  } else {
+    const rawPrediction = String(resJson.prediction ?? resJson.status ?? resJson.classification ?? "").toLowerCase();
+    const isMalicious =
+      resJson.is_malicious === true ||
+      ["scam", "malicious", "suspicious", "fraud", "high", "critical"].some((k) => rawPrediction.includes(k));
+    finalPrediction = isMalicious ? "SCAM" : "GOOD";
+  }
+
+  // ── Parse confidence ───────────────────────────────────────────────
+  const rawConf = parseNumeric(resJson.confidence ?? resJson.confidence_pct ?? resJson.malicious_prob ?? resJson.safe_prob);
+  let confidence = 95.0;
+
+  if (rawConf !== null) {
+    if (rawConf <= 1.0) {
+      confidence = Math.round(rawConf * 1000) / 10;
+    } else {
+      confidence = Math.round(rawConf * 10) / 10;
+    }
+  }
+
+  const threatType = resJson.threatType
+    ? String(resJson.threatType)
+    : finalPrediction === "SCAM" ? "Fraud" : "Benign";
+
+  const threatLevel = resJson.threat_level ? String(resJson.threat_level) : finalPrediction === "SCAM" ? "HIGH" : "LOW";
+  const reason = finalPrediction === "SCAM"
+    ? `Flagged as high-risk call threat by model pipeline (${sourceUsed}). Threat type: ${threatType}. Threat level: ${threatLevel}.`
+    : `Verified safe pattern with no registered spam/scam flags by model pipeline (${sourceUsed}).`;
+
+  return {
+    prediction: finalPrediction,
+    rawPrediction: String(resJson.prediction ?? ""),
+    confidence,
+    phone,
+    country,
+    reason,
+    timestamp,
+    source: sourceUsed,
+    threatLevel,
+  };
+}
 
 export interface PhoneAnalysis {
   phoneNumber: string;
@@ -414,3 +641,78 @@ export function statusToSeverity(status: TrustStatus, trustScore: number): "crit
 }
 
 export type RiskStatus = TrustStatus;
+
+// ----------------------- Unified 5-Domain Detection -----------------------
+export interface GenericThreatDetectionResponse {
+  success: boolean;
+  classification?: "LEGITIMATE" | "SUSPICIOUS" | "MALICIOUS" | "UNVERIFIED" | "INVALID" | string;
+  prediction?: "MALICIOUS" | "SAFE" | "SCAM" | "SUSPICIOUS" | "UNKNOWN" | string;
+  attack_type?: string;
+  confidence?: number | string | null;
+  ml_confidence?: number | string | null;
+  severity?: "HIGH" | "MEDIUM" | "LOW" | "NONE" | string;
+  threat_level?: string;
+  recommended_action?: string;
+  dataset?: string;
+  model_class?: string;
+  status?: string;
+  category?: string;
+  riskLevel?: string;
+  evidence?: string[];
+  sources?: Record<string, unknown>;
+  databaseMatch?: boolean;
+  error?: string;
+}
+
+export async function detectThreatApi(
+  type: "url" | "email" | "sms" | "message" | "ip" | "call" | "phone",
+  content: string
+): Promise<GenericThreatDetectionResponse> {
+  const endpointMap: Record<string, string> = {
+    url: "url",
+    phishing_urls: "url",
+    email: "email",
+    email_scams: "email",
+    sms: "sms",
+    message: "sms",
+    scam_messages: "sms",
+    ip: "ip",
+    malicious_ips: "ip",
+    call: "call",
+    phone: "call",
+    suspicious_calls: "call",
+    spam_calls: "call",
+  };
+  const ep = endpointMap[type] || "url";
+  const url = `${JAVA_BASE}/api/v1/detect/${ep}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      content,
+      type: ep,
+      url: content,
+      email: content,
+      message: content,
+      sms: content,
+      ip: content,
+      phoneNumber: content,
+      phone: content,
+    }),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    let msg = `Backend returned status ${res.status}`;
+    try {
+      const errJson = JSON.parse(errText);
+      if (errJson.error) msg = errJson.error;
+    } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+
+  return (await res.json()) as GenericThreatDetectionResponse;
+}
+

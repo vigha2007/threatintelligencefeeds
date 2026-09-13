@@ -11,15 +11,41 @@ public class EntityDao {
 
     private static final Map<String, String> TABLE_MAP = new HashMap<>();
 
+    /**
+     * Maps URL-friendly slug names to canonical entity keys in TABLE_MAP.
+     * e.g. "phishing-urls" → "phishing_urls"
+     */
+    private static final Map<String, String> SLUG_MAP = new HashMap<>();
+
     static {
-        TABLE_MAP.put("threats", "threats");
-        TABLE_MAP.put("phishing_urls", "phishing_urls");
-        TABLE_MAP.put("spam_calls", "suspicious_calls");
-        TABLE_MAP.put("email_scams", "email_scams");
-        TABLE_MAP.put("malicious_ips", "malicious_ips");
-        TABLE_MAP.put("scam_messages", "scam_messages");
-        TABLE_MAP.put("scam_detector_results", "scam_detector_results");
-        TABLE_MAP.put("users", "users");
+        TABLE_MAP.put("threats",             "threats");
+        TABLE_MAP.put("phishing_urls",        "phishing_urls");
+        TABLE_MAP.put("spam_calls",           "suspicious_calls");
+        TABLE_MAP.put("suspicious_calls",     "suspicious_calls");
+        TABLE_MAP.put("email_scams",          "email_scams");
+        TABLE_MAP.put("malicious_ips",        "malicious_ips");
+        TABLE_MAP.put("scam_messages",        "scam_messages");
+        TABLE_MAP.put("scam_detector_results","scam_detector_results");
+        TABLE_MAP.put("users",                "users");
+
+        // Slug → canonical key (for /api/{slug} REST aliases)
+        SLUG_MAP.put("threats",          "threats");
+        SLUG_MAP.put("phishing-urls",    "phishing_urls");
+        SLUG_MAP.put("email-scams",      "email_scams");
+        SLUG_MAP.put("malicious-ips",    "malicious_ips");
+        SLUG_MAP.put("suspicious-calls", "suspicious_calls");
+        SLUG_MAP.put("scam-messages",    "scam_messages");
+    }
+
+    /**
+     * Resolve an entity key that may be either a canonical key (underscores)
+     * or a URL slug (hyphens). Returns the canonical TABLE_MAP key, or null
+     * if not found.
+     */
+    public String resolveEntity(String name) {
+        if (TABLE_MAP.containsKey(name)) return name;
+        String via = SLUG_MAP.get(name);
+        return (via != null && TABLE_MAP.containsKey(via)) ? via : null;
     }
 
     public boolean isValidEntity(String entity) {

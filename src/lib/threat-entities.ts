@@ -17,6 +17,7 @@ export type EntityKey =
   | "threats"
   | "phishing_urls"
   | "spam_calls"
+  | "suspicious_calls"
   | "email_scams"
   | "malicious_ips"
   | "scam_messages";
@@ -81,6 +82,24 @@ export const entities: Record<EntityKey, EntityDef> = {
     key: "spam_calls",
     label: "Spam Calls",
     singular: "Spam Call",
+    dateColumn: "reported_at",
+    fields: [
+      { name: "phone_number", label: "Phone Number", type: "text", required: true },
+      { name: "country", label: "Country", type: "text" },
+      { name: "severity", label: "Severity", type: "severity", required: true },
+      { name: "pattern", label: "Pattern / Notes", type: "textarea" },
+    ],
+    schema: z.object({
+      phone_number: z.string().min(1).max(64),
+      country: z.string().max(64).optional().nullable(),
+      severity: severityEnum,
+      pattern: z.string().max(500).optional().nullable(),
+    }),
+  },
+  suspicious_calls: {
+    key: "suspicious_calls",
+    label: "Suspicious Calls",
+    singular: "Suspicious Call",
     dateColumn: "reported_at",
     fields: [
       { name: "phone_number", label: "Phone Number", type: "text", required: true },

@@ -74,19 +74,28 @@ CREATE INDEX IF NOT EXISTS idx_phishing_sev_det  ON phishing_urls(severity, dete
 -- suspicious_calls                (target: ≥ 200,000 rows)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS suspicious_calls (
-    id           BIGINT      AUTO_INCREMENT PRIMARY KEY,
-    phone_number VARCHAR(64) NOT NULL,
-    country      VARCHAR(64),
-    severity     VARCHAR(50) NOT NULL DEFAULT 'medium',
-    pattern      VARCHAR(500),
-    detected_at  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
+    id                   BIGINT       AUTO_INCREMENT PRIMARY KEY,
+    phone_number         VARCHAR(64)  NOT NULL,
+    phone_number_10digit VARCHAR(32),
+    country_code         VARCHAR(16)  DEFAULT '+91',
+    country              VARCHAR(64),
+    label                INT          DEFAULT 0,
+    category             VARCHAR(64)  DEFAULT 'normal',
+    data_type            VARCHAR(32)  DEFAULT 'synthetic',
+    source               VARCHAR(64)  DEFAULT 'synthetic_generation',
+    severity             VARCHAR(50)  NOT NULL DEFAULT 'medium',
+    pattern              VARCHAR(500),
+    detected_at          TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC
-  COMMENT='Suspicious call dataset. Target: ≥200,000 rows.';
+  COMMENT='Suspicious call dataset. Target: ≥ 200,000 rows.';
 
-CREATE INDEX IF NOT EXISTS idx_calls_severity    ON suspicious_calls(severity);
-CREATE INDEX IF NOT EXISTS idx_calls_detected    ON suspicious_calls(detected_at);
-CREATE INDEX IF NOT EXISTS idx_calls_phone       ON suspicious_calls(phone_number);
-CREATE INDEX IF NOT EXISTS idx_calls_sev_det     ON suspicious_calls(severity, detected_at);
+CREATE INDEX IF NOT EXISTS idx_calls_severity     ON suspicious_calls(severity);
+CREATE INDEX IF NOT EXISTS idx_calls_detected     ON suspicious_calls(detected_at);
+CREATE INDEX IF NOT EXISTS idx_calls_phone        ON suspicious_calls(phone_number);
+CREATE INDEX IF NOT EXISTS idx_calls_phone_10d    ON suspicious_calls(phone_number_10digit);
+CREATE INDEX IF NOT EXISTS idx_calls_category     ON suspicious_calls(category);
+CREATE INDEX IF NOT EXISTS idx_calls_data_type    ON suspicious_calls(data_type);
+CREATE INDEX IF NOT EXISTS idx_calls_sev_det      ON suspicious_calls(severity, detected_at);
 
 -- ============================================================
 -- email_scams                     (target: ≥ 200,000 rows)

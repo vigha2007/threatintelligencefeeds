@@ -48,3 +48,31 @@ catboost_info/
 .env
 # ML datasets
 ML/data/
+
+.env
+.env.*
+!.env.example
+
+# ML generated results and temporary files
+ML/final_results/
+ML/reports/
+ML/test_*.py
+ML/scratch_test_ml.py
+ML/inspect_artifacts.py
+ML/verify_artifacts.py
+ML/export_final_results.py
+ML/run_final_ml_pipeline.py
+ML/scripts/backup_and_sync_db.py
+
+# Local database backups
+java-threat-intel/backup_suspicious_calls.json
+
+# Temporary/root-level data processing scripts
+clean_combined.py
+clean_csv.py
+delete_indian_phones.py
+inspect_db.py
+
+# Old / backup ML models
+ML/models/backup_old_models/
+ML/models/test_file.pkl

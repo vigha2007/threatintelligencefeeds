@@ -1,0 +1,102 @@
+{
+  "phishing_urls": {
+    "model": "XGBoost",
+    "dataset": "phishing_urls.csv",
+    "synthetic": false,
+    "metrics": {
+      "Accuracy": 0.9257,
+      "Precision": 0.9421,
+      "Recall": 0.8007,
+      "F1": 0.8657,
+      "ROC-AUC": 0.9731,
+      "Training Time (s)": 11.433,
+      "Prediction Time (s)": 0.042,
+      "TP": 5745,
+      "TN": 16472,
+      "FP": 353,
+      "FN": 1430
+    },
+    "model_file": "phishing_urls_best_model.pkl",
+    "preprocessor_file": "phishing_urls_preprocessor.pkl"
+  },
+  "scam_messages": {
+    "model": "XGBoost",
+    "dataset": "scam_messages.csv",
+    "synthetic": false,
+    "metrics": {
+      "Accuracy": 0.976,
+      "Precision": 0.9662,
+      "Recall": 0.9801,
+      "F1": 0.9731,
+      "ROC-AUC": 0.9969,
+      "Training Time (s)": 39.11,
+      "Prediction Time (s)": 0.018,
+      "TP": 3746,
+      "TN": 4656,
+      "FP": 131,
+      "FN": 76
+    },
+    "model_file": "scam_messages_best_model.pkl",
+    "preprocessor_file": "scam_messages_preprocessor.pkl"
+  },
+  "email_scams": {
+    "model": "CatBoost",
+    "dataset": "email_scams.csv",
+    "synthetic": false,
+    "metrics": {
+      "Accuracy": 0.97,
+      "Precision": 0.9558,
+      "Recall": 0.9777,
+      "F1": 0.9666,
+      "ROC-AUC": 0.9958,
+      "Training Time (s)": 43.814,
+      "Prediction Time (s)": 0.0326,
+      "TP": 3202,
+      "TN": 3939,
+      "FP": 148,
+      "FN": 73
+    },
+    "model_file": "email_scams_best_model.pkl",
+    "preprocessor_file": "email_scams_preprocessor.pkl"
+  },
+  "suspicious_calls": {
+    "model": "Random Forest",
+    "dataset": "suspicious_calls_india_50000_synthetic.csv",
+    "synthetic": true,
+    "metrics": {
+      "Accuracy": 0.5706,
+      "Precision": 0.3042,
+      "Recall": 0.3288,
+      "F1": 0.316,
+      "ROC-AUC": 0.5027,
+      "Training Time (s)": 1.75,
+      "Prediction Time (s)": 0.0733,
+      "TP": 992,
+      "TN": 4714,
+      "FP": 2269,
+      "FN": 2025
+    },
+    "model_file": "suspicious_calls_best_model.pkl",
+    "preprocessor_file": "suspicious_calls_preprocessor.pkl"
+  },
+  "malicious_ips": {
+    "model": "XGBoost",
+    "dataset": "malicious_ips.csv",
+    "synthetic": false,
+    "metrics": {
+      "Accuracy": 0.9175,
+      "Precision": 0.9751,
+      "Recall": 0.9052,
+      "F1": 0.9389,
+      "ROC-AUC": 0.9653,
+      "Training Time (s)": 5.45,
+      "Prediction Time (s)": 0.0217,
+      "TP": 15208,
+      "TN": 6812,
+      "FP": 388,
+      "FN": 1592
+    },
+    "model_file": "malicious_ips_best_model.pkl",
+    "preprocessor_file": "malicious_ips_preprocessor.pkl"
+  }
+}

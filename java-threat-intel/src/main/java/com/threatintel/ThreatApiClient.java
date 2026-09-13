@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 
 public class ThreatApiClient {
 
-    private static final String API_URL = "http://localhost:5000/predict";
+    private static final String API_URL = "http://localhost:8000/predict";
 
     /**
      * Sends content to the Flask ML API and returns a ThreatPrediction.

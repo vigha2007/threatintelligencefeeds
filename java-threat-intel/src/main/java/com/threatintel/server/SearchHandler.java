@@ -63,8 +63,10 @@ public class SearchHandler implements HttpHandler {
                 handlePhoneSearch(ex, q);
             } else if (path.endsWith("/sms")) {
                 handleSmsSearch(ex, q);
+            } else if (path.endsWith("/all")) {
+                handleGlobalSearch(ex, q);
             } else {
-                sendJson(ex, 404, Map.of("error", "Unknown search type"));
+                sendJson(ex, 404, Map.of("error", "Unknown search type. Use /phone, /sms, or /all"));
             }
         } catch (SQLException e) {
             System.err.println("[SearchHandler] DB error: " + e.getMessage());
@@ -228,6 +230,91 @@ public class SearchHandler implements HttpHandler {
             }
         }
         return rows;
+    }
+
+    // ========================================================================
+    //  GLOBAL FULL-TEXT SEARCH  — /api/v1/search/all?q=<term>
+    // ========================================================================
+
+    private static final List<String[]> GLOBAL_TABLES = List.of(
+        new String[]{"threats",          "threat_name, description, severity"},
+        new String[]{"phishing_urls",    "url, domain, severity"},
+        new String[]{"suspicious_calls", "phone_number, country, severity, call_type"},
+        new String[]{"email_scams",      "sender, subject, content, severity"},
+        new String[]{"malicious_ips",    "ip_address, country, threat_type, severity"},
+        new String[]{"scam_messages",    "sender, content, channel, severity"}
+    );
+
+    /** Maximum hits returned per table in global search. */
+    private static final int GLOBAL_LIMIT_PER_TABLE = 10;
+
+    /**
+     * Search all entity tables for rows where any indexed column contains the query term.
+     * Returns: { "results": [ { "entity": "...", "label": "...", "rows": [...] }, ... ], "total": N }
+     */
+    private void handleGlobalSearch(HttpExchange ex, String q) throws IOException, SQLException {
+        String term = "%" + q.trim().toLowerCase() + "%";
+        List<Map<String, Object>> allResults = new ArrayList<>();
+        int totalHits = 0;
+
+        String[] entityLabels = {
+            "Threat Feed", "Phishing URL", "Suspicious Call",
+            "Email Scam", "Malicious IP", "Scam Message"
+        };
+        String[] entityRoutes = {
+            "/threats", "/phishing-urls", "/spam-calls",
+            "/email-scams", "/malicious-ips", "/scam-messages"
+        };
+
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            for (int ti = 0; ti < GLOBAL_TABLES.size(); ti++) {
+                String[] tbl = GLOBAL_TABLES.get(ti);
+                String tableName = tbl[0];
+                String[] cols = tbl[1].split(",\\s*");
+
+                // Build WHERE clause: col1 LIKE ? OR col2 LIKE ? ...
+                StringBuilder where = new StringBuilder();
+                for (int i = 0; i < cols.length; i++) {
+                    if (i > 0) where.append(" OR ");
+                    where.append("LOWER(COALESCE(").append(cols[i].trim()).append(",'')) LIKE ?");
+                }
+
+                String sql = "SELECT * FROM " + tableName + " WHERE " + where + " LIMIT " + GLOBAL_LIMIT_PER_TABLE;
+                List<Map<String, Object>> rows = new ArrayList<>();
+
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    for (int i = 1; i <= cols.length; i++) {
+                        ps.setString(i, term);
+                    }
+                    try (ResultSet rs = ps.executeQuery()) {
+                        ResultSetMetaData meta = rs.getMetaData();
+                        int colCount = meta.getColumnCount();
+                        while (rs.next()) {
+                            Map<String, Object> row = new LinkedHashMap<>();
+                            for (int i = 1; i <= colCount; i++) {
+                                row.put(meta.getColumnName(i), rs.getObject(i));
+                            }
+                            rows.add(row);
+                        }
+                    }
+                } catch (SQLException ex2) {
+                    // Skip this table on error
+                    System.err.println("[SearchHandler] Global search skip " + tableName + ": " + ex2.getMessage());
+                }
+
+                if (!rows.isEmpty()) {
+                    Map<String, Object> group = new LinkedHashMap<>();
+                    group.put("entity", tableName);
+                    group.put("label",  entityLabels[ti]);
+                    group.put("route",  entityRoutes[ti]);
+                    group.put("rows",   rows);
+                    allResults.add(group);
+                    totalHits += rows.size();
+                }
+            }
+        }
+
+        sendJson(ex, 200, Map.of("results", allResults, "total", totalHits, "query", q));
     }
 
     // ========================================================================

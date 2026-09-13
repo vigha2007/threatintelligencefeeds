@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { API_BASE_URL } from "@/lib/api-config";
+
 import {
   Shield,
   LayoutDashboard,
@@ -28,15 +30,15 @@ import {
 
 /* ─── Nav items ─────────────────────────────────────────── */
 const navItems = [
-  { to: "/dashboard",     label: "Dashboard",          icon: LayoutDashboard },
-  { to: "/threats",       label: "Threat Feed",        icon: AlertTriangle },
-  { to: "/phishing-urls", label: "URL Intelligence",   icon: Link2 },
-  { to: "/email-scams",   label: "Email Intelligence", icon: Mail },
-  { to: "/call-sms-intel",label: "Phone Intelligence", icon: Radar },
-  { to: "/malicious-ips", label: "IP Intelligence",    icon: Globe },
-  { to: "/spam-calls",    label: "Spam Calls DB",      icon: Phone },
-  { to: "/scam-messages", label: "Scam Messages DB",   icon: MessageCircle },
-  { to: "/chatbot",       label: "Security Chatbot",   icon: MessageSquare },
+  { to: "/dashboard",     label: "Dashboard",           icon: LayoutDashboard },
+  { to: "/call-sms-intel",label: "Threat Intelligence",  icon: Radar },
+  { to: "/threats",       label: "Threat Feed",         icon: AlertTriangle },
+  { to: "/phishing-urls", label: "URL Intelligence",    icon: Link2 },
+  { to: "/email-scams",   label: "Email Intelligence",  icon: Mail },
+  { to: "/malicious-ips", label: "IP Intelligence",     icon: Globe },
+  { to: "/spam-calls",    label: "Spam Calls DB",       icon: Phone },
+  { to: "/scam-messages", label: "Scam Messages DB",    icon: MessageCircle },
+  { to: "/chatbot",       label: "Security Chatbot",    icon: MessageSquare },
 ] as const;
 
 /* ─── Notification types ────────────────────────────────── */
@@ -276,7 +278,7 @@ export function TopHeader() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  /* ── Search logic ── */
+  /* ── Search logic — queries real Java backend /api/v1/search/all ── */
   async function runSearch(q: string) {
     const trimmed = q.trim();
     if (!trimmed) { setResults([]); setSearchOpen(false); return; }
@@ -285,51 +287,44 @@ export function TopHeader() {
     setSearchError(null);
     setSearchOpen(true);
 
-    const entities = [
-      "threats", "phishing_urls", "email_scams",
-      "malicious_ips", "spam_calls", "scam_messages",
-    ];
-
     try {
-      const allResults: SearchResult[] = [];
-
-      await Promise.all(
-        entities.map(async (entity) => {
-          try {
-            const res = await fetch(
-              `/api/v1/entity/${entity}?limit=200&offset=0`
-            );
-            if (!res.ok) return;
-            const json = await res.json();
-            const rows: Record<string, unknown>[] = json.rows ?? [];
-            const lower = trimmed.toLowerCase();
-
-            for (const row of rows) {
-              const matched = Object.values(row).some(
-                (v) =>
-                  v != null &&
-                  String(v).toLowerCase().includes(lower)
-              );
-              if (matched) {
-                allResults.push({
-                  entity,
-                  label: ENTITY_LABELS[entity] ?? entity,
-                  value: rowToValue(entity, row),
-                  severity: String(row.severity ?? ""),
-                  route: ENTITY_ROUTES[entity] ?? "/dashboard",
-                });
-                if (allResults.length >= 20) break; // cap
-              }
-            }
-          } catch {
-            // silently skip per-entity failures
-          }
-        })
+      const res = await fetch(
+        `${API_BASE_URL}/api/v1/search/all?q=${encodeURIComponent(trimmed)}`,
+        { signal: AbortSignal.timeout(6000) }
       );
 
+      if (!res.ok) {
+        throw new Error(`Backend returned ${res.status}`);
+      }
+
+      const json = await res.json();
+      // Backend returns: { results: [{ entity, label, route, rows: [...] }], total, query }
+      const groups: { entity: string; label: string; route: string; rows: Record<string, unknown>[] }[] =
+        json.results ?? [];
+
+      const allResults: SearchResult[] = [];
+      for (const group of groups) {
+        for (const row of group.rows) {
+          allResults.push({
+            entity: group.entity,
+            label:  group.label ?? ENTITY_LABELS[group.entity] ?? group.entity,
+            value:  rowToValue(group.entity, row),
+            severity: String(row.severity ?? ""),
+            route: group.route ?? ENTITY_ROUTES[group.entity] ?? "/dashboard",
+          });
+          if (allResults.length >= 20) break;
+        }
+        if (allResults.length >= 20) break;
+      }
+
       setResults(allResults);
-    } catch {
-      setSearchError("Search failed. Please try again.");
+    } catch (err: unknown) {
+      const isTimeout = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+      setSearchError(
+        isTimeout
+          ? "Backend server unavailable — search timed out."
+          : "Search failed — make sure the Java backend is running."
+      );
       setResults([]);
     } finally {
       setSearching(false);

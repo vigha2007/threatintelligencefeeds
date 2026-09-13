@@ -49,7 +49,11 @@ public class DatabaseConfig {
     private static HikariDataSource dataSource;
 
     static {
-        dataSource = tryConnect("vigha@2007");
+        // Prefer DB_PASSWORD environment variable; fall back to local-dev default.
+        // WARNING: Replace the local-dev default with a proper secrets manager in production.
+        String envPassword = System.getenv("DB_PASSWORD");
+        String primaryPassword = (envPassword != null && !envPassword.isEmpty()) ? envPassword : "vigha@2007";
+        dataSource = tryConnect(primaryPassword);
         if (dataSource == null) {
             System.err.println("Primary password failed — retrying with empty password.");
             dataSource = tryConnect("");

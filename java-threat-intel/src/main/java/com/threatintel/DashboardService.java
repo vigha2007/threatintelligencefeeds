@@ -168,7 +168,11 @@ public class DashboardService {
     public static DashboardStats getDashboardStats() {
         String sql = """
             SELECT
-              (SELECT COUNT(*) FROM threats)          AS total_threats,
+              ((SELECT COUNT(*) FROM phishing_urls) +
+               (SELECT COUNT(*) FROM suspicious_calls) +
+               (SELECT COUNT(*) FROM email_scams) +
+               (SELECT COUNT(*) FROM malicious_ips) +
+               (SELECT COUNT(*) FROM scam_messages))   AS total_threats,
               (SELECT COUNT(*) FROM phishing_urls)    AS phishing_urls,
               (SELECT COUNT(*) FROM suspicious_calls) AS suspicious_calls,
               (SELECT COUNT(*) FROM email_scams)      AS email_scams,
