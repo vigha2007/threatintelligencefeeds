@@ -1,17 +1,20 @@
-# Environment Variables Reference for Render
+# Environment Variables Reference for Render & Free Cloud Deployment
 
 This reference documents every environment variable required or supported across all VigiLock services. Real secrets, keys, or passwords must never be stored in Git. Values are represented with `<SET_IN_RENDER>` placeholders.
 
 ---
 
-## 1. MYSQL (Private Database Service)
+## 1. FREE CLOUD DATABASE (TiDB Cloud Serverless / Aiven / Remote MySQL)
 
 | Variable | Service | Purpose | Required | Example Format |
 |---|---|---|---|---|
-| `MYSQL_DATABASE` | MySQL | Database name created on container startup | Yes | `threat_intelligence_db` |
-| `MYSQL_USER` | MySQL | Non-root application database user | Yes | `vigilock_user` |
-| `MYSQL_PASSWORD` | MySQL | Password for application database user | Yes | `<SET_IN_RENDER>` |
-| `MYSQL_ROOT_PASSWORD` | MySQL | Administrator root password for MySQL | Yes | `<SET_IN_RENDER>` |
+| `DB_HOST` | Java Backend | Cloud Database Hostname | Yes | `gateway01.us-east-1.prod.aws.tidbcloud.com` |
+| `DB_PORT` | Java Backend | Cloud Database Port | Yes | `4000` (TiDB) or `3306` (MySQL) |
+| `DB_NAME` | Java Backend | Target Database Name | Yes | `threat_intelligence_db` |
+| `DB_USER` | Java Backend | Cloud Database Username | Yes | `xxxxxx.root` |
+| `DB_PASSWORD` | Java Backend | Cloud Database Password | Yes | `<SET_IN_RENDER>` |
+| `DB_SSL_MODE` | Java Backend | SSL/TLS Mode (`REQUIRED`, `VERIFY_IDENTITY`, `true`) | Yes | `REQUIRED` |
+| `DB_URL` | Java Backend | Optional Direct Custom JDBC URL | Optional | `jdbc:mysql://host:port/db?useSSL=true` |
 
 ---
 
@@ -20,23 +23,28 @@ This reference documents every environment variable required or supported across
 | Variable | Service | Purpose | Required | Example Format |
 |---|---|---|---|---|
 | `PORT` | FastAPI | Port for Uvicorn web server (automatically provided by Render) | Yes | `8000` |
-| `CORS_ORIGINS` | FastAPI | Comma-separated allowed frontend origins | Optional | `https://vigilock-frontend.onrender.com,*` |
+| `CORS_ORIGINS` | FastAPI | Comma-separated allowed frontend origins | Optional | `https://vigilock.onrender.com,*` |
 
 ---
 
-## 3. JAVA BACKEND (Plain Java / Maven Service)
+## 3. JAVA BACKEND (Plain Java / Maven Web Service)
 
 | Variable | Service | Purpose | Required | Example Format |
 |---|---|---|---|---|
 | `PORT` | Java Backend | Web server listen port (automatically injected by Render) | Yes | `8081` |
-| `DB_PASSWORD` | Java Backend | MySQL database password | Yes | `<SET_IN_RENDER>` |
+| `DB_HOST` | Java Backend | Cloud MySQL Host | Yes | `<SET_IN_RENDER>` |
+| `DB_PORT` | Java Backend | Cloud MySQL Port | Yes | `4000` or `3306` |
+| `DB_NAME` | Java Backend | Database Name | Yes | `threat_intelligence_db` |
+| `DB_USER` | Java Backend | Database User | Yes | `<SET_IN_RENDER>` |
+| `DB_PASSWORD` | Java Backend | Database Password | Yes | `<SET_IN_RENDER>` |
+| `DB_SSL_MODE` | Java Backend | SSL mode for Cloud DB | Yes | `REQUIRED` |
 | `ML_API_URL` | Java Backend | Base URL pointing to deployed FastAPI ML service | Yes | `https://vigilock-ml.onrender.com` |
 | `GEMINI_API_KEY` | Java Backend | Google Gemini API key for Cyber Sentinel assistant | Optional | `<SET_IN_RENDER>` |
 | `GEMINI_MODEL` | Java Backend | Specific Gemini model identifier | Optional | `gemini-2.0-flash` |
 | `IPQS_API_KEY` | Java Backend | IPQualityScore API key for phone fraud checks | Optional | `<SET_IN_RENDER>` |
 | `TRUECALLER_CLIENT_ID` | Java Backend | Truecaller API Client ID | Optional | `<SET_IN_RENDER>` |
 | `TRUECALLER_CLIENT_SECRET` | Java Backend | Truecaller API Client Secret | Optional | `<SET_IN_RENDER>` |
-| `TRUECALLER_REDIRECT_URI` | Java Backend | Truecaller OAuth redirect URI | Optional | `https://vigilock-api.onrender.com/callback` |
+| `TRUECALLER_REDIRECT_URI` | Java Backend | Truecaller OAuth redirect URI | Optional | `https://vigilock-backend.onrender.com/callback` |
 
 ---
 

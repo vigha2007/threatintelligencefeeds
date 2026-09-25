@@ -15,6 +15,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScamMessagesRouteImport } from './routes/scam-messages'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PhishingUrlsRouteImport } from './routes/phishing-urls'
+import { Route as ModelComparisonRouteImport } from './routes/model-comparison'
 import { Route as MaliciousIpsRouteImport } from './routes/malicious-ips'
 import { Route as EmailScamsRouteImport } from './routes/email-scams'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -50,6 +51,11 @@ const ReportsRoute = ReportsRouteImport.update({
 const PhishingUrlsRoute = PhishingUrlsRouteImport.update({
   id: '/phishing-urls',
   path: '/phishing-urls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModelComparisonRoute = ModelComparisonRouteImport.update({
+  id: '/model-comparison',
+  path: '/model-comparison',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MaliciousIpsRoute = MaliciousIpsRouteImport.update({
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/email-scams': typeof EmailScamsRoute
   '/malicious-ips': typeof MaliciousIpsRoute
+  '/model-comparison': typeof ModelComparisonRoute
   '/phishing-urls': typeof PhishingUrlsRoute
   '/reports': typeof ReportsRoute
   '/scam-messages': typeof ScamMessagesRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/email-scams': typeof EmailScamsRoute
   '/malicious-ips': typeof MaliciousIpsRoute
+  '/model-comparison': typeof ModelComparisonRoute
   '/phishing-urls': typeof PhishingUrlsRoute
   '/reports': typeof ReportsRoute
   '/scam-messages': typeof ScamMessagesRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/email-scams': typeof EmailScamsRoute
   '/malicious-ips': typeof MaliciousIpsRoute
+  '/model-comparison': typeof ModelComparisonRoute
   '/phishing-urls': typeof PhishingUrlsRoute
   '/reports': typeof ReportsRoute
   '/scam-messages': typeof ScamMessagesRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/email-scams'
     | '/malicious-ips'
+    | '/model-comparison'
     | '/phishing-urls'
     | '/reports'
     | '/scam-messages'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/email-scams'
     | '/malicious-ips'
+    | '/model-comparison'
     | '/phishing-urls'
     | '/reports'
     | '/scam-messages'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/email-scams'
     | '/malicious-ips'
+    | '/model-comparison'
     | '/phishing-urls'
     | '/reports'
     | '/scam-messages'
@@ -178,6 +190,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   EmailScamsRoute: typeof EmailScamsRoute
   MaliciousIpsRoute: typeof MaliciousIpsRoute
+  ModelComparisonRoute: typeof ModelComparisonRoute
   PhishingUrlsRoute: typeof PhishingUrlsRoute
   ReportsRoute: typeof ReportsRoute
   ScamMessagesRoute: typeof ScamMessagesRoute
@@ -228,6 +241,13 @@ declare module '@tanstack/react-router' {
       path: '/phishing-urls'
       fullPath: '/phishing-urls'
       preLoaderRoute: typeof PhishingUrlsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/model-comparison': {
+      id: '/model-comparison'
+      path: '/model-comparison'
+      fullPath: '/model-comparison'
+      preLoaderRoute: typeof ModelComparisonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/malicious-ips': {
@@ -282,6 +302,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   EmailScamsRoute: EmailScamsRoute,
   MaliciousIpsRoute: MaliciousIpsRoute,
+  ModelComparisonRoute: ModelComparisonRoute,
   PhishingUrlsRoute: PhishingUrlsRoute,
   ReportsRoute: ReportsRoute,
   ScamMessagesRoute: ScamMessagesRoute,

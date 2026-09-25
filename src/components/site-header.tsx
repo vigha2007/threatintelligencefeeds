@@ -26,19 +26,21 @@ import {
   AlertCircle,
   Info,
   Clock,
+  BarChart3,
 } from "lucide-react";
 
 /* ─── Nav items ─────────────────────────────────────────── */
 const navItems = [
-  { to: "/dashboard",     label: "Dashboard",           icon: LayoutDashboard },
-  { to: "/call-sms-intel",label: "Threat Intelligence",  icon: Radar },
-  { to: "/threats",       label: "Threat Feed",         icon: AlertTriangle },
-  { to: "/phishing-urls", label: "URL Intelligence",    icon: Link2 },
-  { to: "/email-scams",   label: "Email Intelligence",  icon: Mail },
-  { to: "/malicious-ips", label: "IP Intelligence",     icon: Globe },
-  { to: "/spam-calls",    label: "Spam Calls DB",       icon: Phone },
-  { to: "/scam-messages", label: "Scam Messages DB",    icon: MessageCircle },
-  { to: "/chatbot",       label: "Security Chatbot",    icon: MessageSquare },
+  { to: "/dashboard",          label: "Dashboard",           icon: LayoutDashboard },
+  { to: "/call-sms-intel",     label: "Threat Intelligence",  icon: Radar },
+  { to: "/threats",            label: "Threat Feed",         icon: AlertTriangle },
+  { to: "/phishing-urls",      label: "URL Intelligence",    icon: Link2 },
+  { to: "/email-scams",        label: "Email Intelligence",  icon: Mail },
+  { to: "/malicious-ips",      label: "IP Intelligence",     icon: Globe },
+  { to: "/spam-calls",         label: "Spam Calls DB",       icon: Phone },
+  { to: "/scam-messages",      label: "Scam Messages DB",    icon: MessageCircle },
+  { to: "/chatbot",            label: "Security Chatbot",    icon: MessageSquare },
+  { to: "/model-comparison",   label: "Model Comparison",    icon: BarChart3 },
 ] as const;
 
 /* ─── Notification types ────────────────────────────────── */

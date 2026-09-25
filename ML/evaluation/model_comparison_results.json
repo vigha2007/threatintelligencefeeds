@@ -1,0 +1,156 @@
+{
+    "metadata": {
+        "dataset": "scam_messages (SMS Threat Intelligence Corpus)",
+        "source": "MySQL threat_intelligence_db.scam_messages",
+        "total_samples": 43100,
+        "train_samples": 34480,
+        "test_samples": 8620,
+        "train_test_split": "80:20 (Stratified)",
+        "random_state": 42,
+        "feature_representation": "TF-IDF (1-2 ngrams, sublinear_tf, max_features=5000)",
+        "feature_count": 5000,
+        "evaluated_at": "2026-09-18 22:12:08"
+    },
+    "models": {
+        "Logistic Regression": {
+            "accuracy": 0.966241,
+            "accuracy_pct": 96.62,
+            "precision": 0.968998,
+            "precision_pct": 96.9,
+            "recall": 0.954581,
+            "recall_pct": 95.46,
+            "f1_score": 0.961736,
+            "f1_pct": 96.17,
+            "roc_auc": 0.994798,
+            "roc_auc_pct": 99.48,
+            "training_time_seconds": 0.1002,
+            "inference_time_seconds": 0.0132,
+            "confusion_matrix": {
+                "true_positive": 3657,
+                "true_negative": 4672,
+                "false_positive": 117,
+                "false_negative": 174
+            }
+        },
+        "Naive Bayes": {
+            "accuracy": 0.937703,
+            "accuracy_pct": 93.77,
+            "precision": 0.898018,
+            "precision_pct": 89.8,
+            "recall": 0.969982,
+            "recall_pct": 97.0,
+            "f1_score": 0.932614,
+            "f1_pct": 93.26,
+            "roc_auc": 0.990155,
+            "roc_auc_pct": 99.02,
+            "training_time_seconds": 0.0122,
+            "inference_time_seconds": 0.0,
+            "confusion_matrix": {
+                "true_positive": 3716,
+                "true_negative": 4367,
+                "false_positive": 422,
+                "false_negative": 115
+            }
+        },
+        "Decision Tree": {
+            "accuracy": 0.887703,
+            "accuracy_pct": 88.77,
+            "precision": 0.946646,
+            "precision_pct": 94.66,
+            "recall": 0.79196,
+            "recall_pct": 79.2,
+            "f1_score": 0.862422,
+            "f1_pct": 86.24,
+            "roc_auc": 0.931485,
+            "roc_auc_pct": 93.15,
+            "training_time_seconds": 2.5871,
+            "inference_time_seconds": 0.002,
+            "confusion_matrix": {
+                "true_positive": 3034,
+                "true_negative": 4618,
+                "false_positive": 171,
+                "false_negative": 797
+            }
+        },
+        "Random Forest": {
+            "accuracy": 0.926914,
+            "accuracy_pct": 92.69,
+            "precision": 0.968942,
+            "precision_pct": 96.89,
+            "recall": 0.863221,
+            "recall_pct": 86.32,
+            "f1_score": 0.913031,
+            "f1_pct": 91.3,
+            "roc_auc": 0.984175,
+            "roc_auc_pct": 98.42,
+            "training_time_seconds": 1.1853,
+            "inference_time_seconds": 0.0594,
+            "confusion_matrix": {
+                "true_positive": 3307,
+                "true_negative": 4683,
+                "false_positive": 106,
+                "false_negative": 524
+            }
+        },
+        "SVM": {
+            "accuracy": 0.969142,
+            "accuracy_pct": 96.91,
+            "precision": 0.96945,
+            "precision_pct": 96.94,
+            "recall": 0.960846,
+            "recall_pct": 96.08,
+            "f1_score": 0.965128,
+            "f1_pct": 96.51,
+            "roc_auc": 0.99521,
+            "roc_auc_pct": 99.52,
+            "training_time_seconds": 0.3633,
+            "inference_time_seconds": 0.007,
+            "confusion_matrix": {
+                "true_positive": 3681,
+                "true_negative": 4673,
+                "false_positive": 116,
+                "false_negative": 150
+            }
+        },
+        "XGBoost": {
+            "accuracy": 0.945128,
+            "accuracy_pct": 94.51,
+            "precision": 0.965613,
+            "precision_pct": 96.56,
+            "recall": 0.908901,
+            "recall_pct": 90.89,
+            "f1_score": 0.936399,
+            "f1_pct": 93.64,
+            "roc_auc": 0.988518,
+            "roc_auc_pct": 98.85,
+            "training_time_seconds": 46.3529,
+            "inference_time_seconds": 0.0383,
+            "confusion_matrix": {
+                "true_positive": 3482,
+                "true_negative": 4665,
+                "false_positive": 124,
+                "false_negative": 349
+            }
+        },
+        "CatBoost": {
+            "accuracy": 0.951624,
+            "accuracy_pct": 95.16,
+            "precision": 0.964111,
+            "precision_pct": 96.41,
+            "recall": 0.925607,
+            "recall_pct": 92.56,
+            "f1_score": 0.944467,
+            "f1_pct": 94.45,
+            "roc_auc": 0.990621,
+            "roc_auc_pct": 99.06,
+            "training_time_seconds": 57.2972,
+            "inference_time_seconds": 0.0493,
+            "confusion_matrix": {
+                "true_positive": 3546,
+                "true_negative": 4657,
+                "false_positive": 132,
+                "false_negative": 285
+            }
+        }
+    }
+}

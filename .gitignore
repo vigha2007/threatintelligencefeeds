@@ -64,8 +64,13 @@ ML/export_final_results.py
 ML/run_final_ml_pipeline.py
 ML/scripts/backup_and_sync_db.py
 
-# Local database backups
+# Local database backups and dumps
 java-threat-intel/backup_suspicious_calls.json
+*.sql.bak
+*.dump
+dumps/
+local_backup_*.sql
+threat_intel_backup.sql
 
 # Temporary/root-level data processing scripts
 clean_combined.py

@@ -9,10 +9,18 @@ import java.nio.charset.StandardCharsets;
 
 public class ThreatApiClient {
 
-    private static final String API_URL = "http://localhost:8000/predict";
+    private static String getApiUrl() {
+        String mlBase = System.getenv("ML_API_URL");
+        if (mlBase != null && !mlBase.trim().isEmpty()) {
+            String base = mlBase.trim();
+            if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
+            return base + "/predict";
+        }
+        return "http://localhost:8000/predict";
+    }
 
     /**
-     * Sends content to the Flask ML API and returns a ThreatPrediction.
+     * Sends content to the ML API and returns a ThreatPrediction.
      *
      * @param type    "url" | "email" | "sms" | "call" | "ip"
      * @param content Raw string to analyse
@@ -24,7 +32,7 @@ public class ThreatApiClient {
         byte[] postData = requestBody.getBytes(StandardCharsets.UTF_8);
 
         // ── Open connection ────────────────────────────────────────────────
-        URL url = new URL(API_URL);
+        URL url = new URL(getApiUrl());
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type",  "application/json");

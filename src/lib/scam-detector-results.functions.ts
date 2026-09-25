@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { severityEnum } from "./threat-entities";
 
-const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || "http://localhost:8081";
+const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 
 const inputSchema = z.object({
   input_text: z.string().min(1).max(8000),

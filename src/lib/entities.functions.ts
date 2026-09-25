@@ -55,7 +55,7 @@ export async function listEntity(params: {
     throw new Error(
       isTimeout
         ? "Backend server unavailable — request timed out. Is the Java backend running?"
-        : "Backend server unavailable — cannot connect to http://localhost:8081."
+        : `Backend server unavailable — cannot connect to ${API_BASE_URL}.`
     );
   }
 

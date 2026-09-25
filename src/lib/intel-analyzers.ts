@@ -52,7 +52,7 @@ export interface CallDetectionResponse {
 }
 
 export const ML_API_BASE = import.meta.env.VITE_ML_API_URL || import.meta.env.VITE_API_URL || "http://localhost:5000";
-export const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || "http://localhost:8081";
+export const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 
 export async function predictCallApi(phone: string, phoneInfo?: Partial<AbstractPhoneResult>): Promise<CallDetectionResponse> {
   const timestamp = new Date().toISOString();

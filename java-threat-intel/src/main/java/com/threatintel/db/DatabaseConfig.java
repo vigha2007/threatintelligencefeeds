@@ -33,24 +33,46 @@ public class DatabaseConfig {
      *   connectTimeout            – 30 s to establish initial connection
      *   socketTimeout             – 600 s (10 min) for long-running statements
      */
-    private static final String JDBC_URL =
-        "jdbc:mysql://localhost:3306/threat_intelligence_db"
-        + "?createDatabaseIfNotExist=true"
-        + "&useSSL=false"
-        + "&allowPublicKeyRetrieval=true"
-        + "&serverTimezone=UTC"
-        + "&rewriteBatchedStatements=true"
-        + "&max_allowed_packet=134217728"     // 128 MB
-        + "&net_read_timeout=600"
-        + "&net_write_timeout=600"
-        + "&connectTimeout=30000"
-        + "&socketTimeout=600000";            // 10 minutes
+    private static String getJdbcUrl() {
+        String customUrl = System.getenv("DB_URL");
+        if (customUrl != null && !customUrl.trim().isEmpty()) {
+            return customUrl.trim();
+        }
+
+        String host = System.getenv().getOrDefault("DB_HOST", "localhost");
+        String port = System.getenv().getOrDefault("DB_PORT", "3306");
+        String dbName = System.getenv().getOrDefault("DB_NAME", "threat_intelligence_db");
+        String sslMode = System.getenv().getOrDefault("DB_SSL_MODE", "false");
+        boolean useSsl = "true".equalsIgnoreCase(sslMode)
+                || "REQUIRED".equalsIgnoreCase(sslMode)
+                || "VERIFY_IDENTITY".equalsIgnoreCase(sslMode)
+                || "VERIFY_CA".equalsIgnoreCase(sslMode);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("jdbc:mysql://").append(host).append(":").append(port).append("/").append(dbName)
+          .append("?createDatabaseIfNotExist=true")
+          .append("&useSSL=").append(useSsl ? "true" : "false");
+
+        if (useSsl && (sslMode.equalsIgnoreCase("VERIFY_IDENTITY") || sslMode.equalsIgnoreCase("VERIFY_CA") || sslMode.equalsIgnoreCase("REQUIRED"))) {
+            sb.append("&sslMode=").append(sslMode);
+        }
+
+        sb.append("&allowPublicKeyRetrieval=true")
+          .append("&serverTimezone=UTC")
+          .append("&rewriteBatchedStatements=true")
+          .append("&max_allowed_packet=134217728")
+          .append("&net_read_timeout=600")
+          .append("&net_write_timeout=600")
+          .append("&connectTimeout=30000")
+          .append("&socketTimeout=600000");
+
+        return sb.toString();
+    }
 
     private static HikariDataSource dataSource;
 
     static {
         // Prefer DB_PASSWORD environment variable; fall back to local-dev default.
-        // WARNING: Replace the local-dev default with a proper secrets manager in production.
         String envPassword = System.getenv("DB_PASSWORD");
         String primaryPassword = (envPassword != null && !envPassword.isEmpty()) ? envPassword : "vigha@2007";
         dataSource = tryConnect(primaryPassword);
@@ -68,10 +90,13 @@ public class DatabaseConfig {
      */
     private static HikariDataSource tryConnect(String password) {
         try {
+            String user = System.getenv().getOrDefault("DB_USER", "root");
+            String jdbcUrl = getJdbcUrl();
+
             HikariConfig config = new HikariConfig();
             config.setDriverClassName("com.mysql.cj.jdbc.Driver");
-            config.setJdbcUrl(JDBC_URL);
-            config.setUsername("root");
+            config.setJdbcUrl(jdbcUrl);
+            config.setUsername(user);
             config.setPassword(password);
 
             // PreparedStatement cache — reduces parse overhead for repeated inserts

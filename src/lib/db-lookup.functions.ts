@@ -28,7 +28,7 @@ export interface DbSmsRecord {
 export type PhoneLookupResult = DbPhoneRecord | { found: false };
 export type SmsLookupResult   = DbSmsRecord   | { found: false };
 
-const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || "http://localhost:8081";
+const JAVA_BASE = import.meta.env.VITE_JAVA_BASE_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 
 export async function logSearch(params: {
   data: { module: "Phone" | "SMS"; input: string; dbMatch: boolean; aiUsed: boolean; result: string };
